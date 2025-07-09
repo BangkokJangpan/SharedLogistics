@@ -59,6 +59,11 @@ function setupEventListeners() {
         setTimeout(loadMatches, 100);
     });
     
+    // Admin tab listener
+    document.getElementById('admin-tab').addEventListener('click', function() {
+        setTimeout(loadAdminStatistics, 100);
+    });
+    
     // Modal buttons
     document.getElementById('add-tolerance-btn').addEventListener('click', showToleranceForm);
     document.getElementById('add-request-btn').addEventListener('click', showRequestForm);
@@ -68,6 +73,21 @@ function setupEventListeners() {
     // Auto match buttons
     document.getElementById('auto-match-btn').addEventListener('click', autoMatch);
     document.getElementById('auto-match-admin-btn').addEventListener('click', autoMatch);
+    
+    // Admin buttons
+    document.getElementById('refresh-stats-btn').addEventListener('click', loadAdminStatistics);
+    document.getElementById('statistics-tab').addEventListener('click', function() {
+        setTimeout(loadAdminStatistics, 100);
+    });
+    document.getElementById('users-tab').addEventListener('click', function() {
+        setTimeout(loadAdminUsers, 100);
+    });
+    document.getElementById('carriers-tab').addEventListener('click', function() {
+        setTimeout(loadAdminCarriers, 100);
+    });
+    document.getElementById('drivers-tab').addEventListener('click', function() {
+        setTimeout(loadAdminDrivers, 100);
+    });
 }
 
 // Login function
@@ -806,4 +826,429 @@ function getStatusBadgeClass(status) {
         'active': 'bg-success'
     };
     return classMap[status] || 'bg-secondary';
+}
+
+// Admin Functions
+async function loadAdminStatistics() {
+    try {
+        const response = await fetch('/api/admin/statistics');
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderAdminStatistics(data);
+        } else {
+            showAlert(data.error || '통계 로드에 실패했습니다.', 'danger');
+        }
+    } catch (error) {
+        showAlert('서버 오류가 발생했습니다.', 'danger');
+    }
+}
+
+function renderAdminStatistics(data) {
+    const container = document.getElementById('admin-statistics');
+    
+    let html = `
+        <div class="row mb-4">
+            <div class="col-12">
+                <h6>전체 개요</h6>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">총 사용자</h5>
+                        <h2 class="text-primary">${data.overview.total_users}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">총 운송사</h5>
+                        <h2 class="text-info">${data.overview.total_carriers}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">총 기사</h5>
+                        <h2 class="text-warning">${data.overview.total_drivers}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">총 매칭</h5>
+                        <h2 class="text-success">${data.overview.total_matches}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <h6>이번 달 활동</h6>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">여유 운송</h5>
+                        <h2 class="text-primary">${data.monthly.tolerances}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">운송 요청</h5>
+                        <h2 class="text-info">${data.monthly.requests}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">매칭 성공</h5>
+                        <h2 class="text-success">${data.monthly.matches}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>상태별 여유 운송</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>사용 가능</span>
+                                <span class="badge bg-success">${data.status_breakdown.tolerances.available || 0}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>매칭됨</span>
+                                <span class="badge bg-info">${data.status_breakdown.tolerances.matched || 0}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>완료됨</span>
+                                <span class="badge bg-success">${data.status_breakdown.tolerances.completed || 0}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>상태별 운송 요청</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>대기 중</span>
+                                <span class="badge bg-warning">${data.status_breakdown.requests.pending || 0}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>매칭됨</span>
+                                <span class="badge bg-info">${data.status_breakdown.requests.matched || 0}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>운송 중</span>
+                                <span class="badge bg-warning">${data.status_breakdown.requests.in_transit || 0}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>완료됨</span>
+                                <span class="badge bg-success">${data.status_breakdown.requests.completed || 0}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>상위 성과 운송사</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>운송사</th>
+                                        <th>매칭 수</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+    `;
+    
+    data.top_carriers.forEach(carrier => {
+        html += `
+            <tr>
+                <td>${carrier.name}</td>
+                <td><span class="badge bg-success">${carrier.matches}</span></td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+async function loadAdminUsers() {
+    try {
+        const response = await fetch('/api/admin/users');
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderAdminUsers(data);
+        } else {
+            showAlert(data.error || '사용자 로드에 실패했습니다.', 'danger');
+        }
+    } catch (error) {
+        showAlert('서버 오류가 발생했습니다.', 'danger');
+    }
+}
+
+function renderAdminUsers(users) {
+    const container = document.getElementById('users-list');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<p class="text-muted">등록된 사용자가 없습니다.</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>사용자명</th>
+                    <th>이메일</th>
+                    <th>이름</th>
+                    <th>역할</th>
+                    <th>전화번호</th>
+                    <th>상태</th>
+                    <th>가입일</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    users.forEach(user => {
+        html += `
+            <tr>
+                <td>${user.id}</td>
+                <td>${user.username}</td>
+                <td>${user.email}</td>
+                <td>${user.full_name}</td>
+                <td><span class="badge ${getRoleBadgeClass(user.role)}">${getRoleText(user.role)}</span></td>
+                <td>${user.phone || '-'}</td>
+                <td><span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">${user.is_active ? '활성' : '비활성'}</span></td>
+                <td>${formatDateTime(user.created_at)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${user.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    ${user.role !== 'admin' ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>` : ''}
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function loadAdminCarriers() {
+    try {
+        const response = await fetch('/api/admin/carriers');
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderAdminCarriers(data);
+        } else {
+            showAlert(data.error || '운송사 로드에 실패했습니다.', 'danger');
+        }
+    } catch (error) {
+        showAlert('서버 오류가 발생했습니다.', 'danger');
+    }
+}
+
+function renderAdminCarriers(carriers) {
+    const container = document.getElementById('carriers-list');
+    
+    if (carriers.length === 0) {
+        container.innerHTML = '<p class="text-muted">등록된 운송사가 없습니다.</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>사용자명</th>
+                    <th>회사명</th>
+                    <th>사업자등록번호</th>
+                    <th>담당자</th>
+                    <th>주소</th>
+                    <th>상태</th>
+                    <th>등록일</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    carriers.forEach(carrier => {
+        html += `
+            <tr>
+                <td>${carrier.id}</td>
+                <td>${carrier.username}</td>
+                <td>${carrier.company_name}</td>
+                <td>${carrier.business_license || '-'}</td>
+                <td>${carrier.contact_person || '-'}</td>
+                <td>${carrier.address || '-'}</td>
+                <td><span class="badge ${getStatusBadgeClass(carrier.status)}">${getStatusText(carrier.status)}</span></td>
+                <td>${formatDateTime(carrier.created_at)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editCarrier(${carrier.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCarrier(${carrier.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+async function loadAdminDrivers() {
+    try {
+        const response = await fetch('/api/admin/drivers');
+        const data = await response.json();
+        
+        if (response.ok) {
+            renderAdminDrivers(data);
+        } else {
+            showAlert(data.error || '기사 로드에 실패했습니다.', 'danger');
+        }
+    } catch (error) {
+        showAlert('서버 오류가 발생했습니다.', 'danger');
+    }
+}
+
+function renderAdminDrivers(drivers) {
+    const container = document.getElementById('drivers-list');
+    
+    if (drivers.length === 0) {
+        container.innerHTML = '<p class="text-muted">등록된 기사가 없습니다.</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>사용자명</th>
+                    <th>소속 운송사</th>
+                    <th>면허번호</th>
+                    <th>차량 종류</th>
+                    <th>차량 번호</th>
+                    <th>상태</th>
+                    <th>등록일</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    drivers.forEach(driver => {
+        html += `
+            <tr>
+                <td>${driver.id}</td>
+                <td>${driver.username}</td>
+                <td>${driver.carrier_name}</td>
+                <td>${driver.license_number}</td>
+                <td>${driver.vehicle_type || '-'}</td>
+                <td>${driver.vehicle_number || '-'}</td>
+                <td><span class="badge ${getStatusBadgeClass(driver.status)}">${getStatusText(driver.status)}</span></td>
+                <td>${formatDateTime(driver.created_at)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editDriver(${driver.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDriver(${driver.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function getRoleBadgeClass(role) {
+    const classMap = {
+        'admin': 'bg-danger',
+        'carrier': 'bg-primary',
+        'driver': 'bg-success'
+    };
+    return classMap[role] || 'bg-secondary';
+}
+
+// Admin action functions (placeholders for now)
+function editUser(userId) {
+    showAlert('사용자 편집 기능은 구현 중입니다.', 'info');
+}
+
+function deleteUser(userId) {
+    if (confirm('정말로 이 사용자를 삭제하시겠습니까?')) {
+        showAlert('사용자 삭제 기능은 구현 중입니다.', 'info');
+    }
+}
+
+function editCarrier(carrierId) {
+    showAlert('운송사 편집 기능은 구현 중입니다.', 'info');
+}
+
+function deleteCarrier(carrierId) {
+    if (confirm('정말로 이 운송사를 삭제하시겠습니까?')) {
+        showAlert('운송사 삭제 기능은 구현 중입니다.', 'info');
+    }
+}
+
+function editDriver(driverId) {
+    showAlert('기사 편집 기능은 구현 중입니다.', 'info');
+}
+
+function deleteDriver(driverId) {
+    if (confirm('정말로 이 기사를 삭제하시겠습니까?')) {
+        showAlert('기사 삭제 기능은 구현 중입니다.', 'info');
+    }
 }

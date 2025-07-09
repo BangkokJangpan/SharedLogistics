@@ -263,12 +263,87 @@
                 <div class="tab-pane fade" id="admin" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>시스템 관리</h5>
-                        <button id="auto-match-admin-btn" class="btn btn-success">
-                            <i class="fas fa-magic"></i> 자동 매칭 실행
-                        </button>
+                        <div>
+                            <button id="auto-match-admin-btn" class="btn btn-success me-2">
+                                <i class="fas fa-magic"></i> 자동 매칭 실행
+                            </button>
+                            <button id="refresh-stats-btn" class="btn btn-info">
+                                <i class="fas fa-sync"></i> 통계 새로고침
+                            </button>
+                        </div>
                     </div>
-                    <div id="admin-content">
-                        <!-- Admin content will be loaded here -->
+                    
+                    <!-- Admin Sub-tabs -->
+                    <ul class="nav nav-pills mb-3" id="admin-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="statistics-tab" data-bs-toggle="pill" data-bs-target="#statistics" type="button" role="tab">
+                                <i class="fas fa-chart-bar"></i> 통계
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="users-tab" data-bs-toggle="pill" data-bs-target="#users" type="button" role="tab">
+                                <i class="fas fa-users"></i> 사용자 관리
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="carriers-tab" data-bs-toggle="pill" data-bs-target="#carriers" type="button" role="tab">
+                                <i class="fas fa-building"></i> 운송사 관리
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="drivers-tab" data-bs-toggle="pill" data-bs-target="#drivers" type="button" role="tab">
+                                <i class="fas fa-id-card"></i> 기사 관리
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Admin Tab Content -->
+                    <div class="tab-content" id="admin-tab-content">
+                        <!-- Statistics Tab -->
+                        <div class="tab-pane fade show active" id="statistics" role="tabpanel">
+                            <div id="admin-statistics">
+                                <!-- Statistics content will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Users Tab -->
+                        <div class="tab-pane fade" id="users" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6>사용자 관리</h6>
+                                <button id="add-user-btn" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> 사용자 추가
+                                </button>
+                            </div>
+                            <div id="users-list" class="table-responsive">
+                                <!-- Users table will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Carriers Tab -->
+                        <div class="tab-pane fade" id="carriers" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6>운송사 관리</h6>
+                                <button id="add-carrier-btn" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> 운송사 추가
+                                </button>
+                            </div>
+                            <div id="carriers-list" class="table-responsive">
+                                <!-- Carriers table will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Drivers Tab -->
+                        <div class="tab-pane fade" id="drivers" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6>기사 관리</h6>
+                                <button id="add-driver-btn" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> 기사 추가
+                                </button>
+                            </div>
+                            <div id="drivers-list" class="table-responsive">
+                                <!-- Drivers table will be loaded here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

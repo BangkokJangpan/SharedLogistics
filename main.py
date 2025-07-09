@@ -529,6 +529,305 @@ def auto_match():
         'message': f'{matches_created}개의 매칭이 생성되었습니다'
     })
 
+@app.route('/api/admin/users', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def admin_users():
+    """Admin user management API"""
+    if request.method == 'GET':
+        users = User.query.all()
+        result = []
+        for user in users:
+            result.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role,
+                'full_name': user.full_name,
+                'phone': user.phone,
+                'is_active': user.is_active,
+                'created_at': user.created_at.isoformat(),
+                'updated_at': user.updated_at.isoformat()
+            })
+        return jsonify(result)
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        # Check if username already exists
+        if User.query.filter_by(username=data['username']).first():
+            return jsonify({'error': '이미 존재하는 사용자명입니다'}), 400
+        
+        # Check if email already exists
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({'error': '이미 존재하는 이메일입니다'}), 400
+        
+        # Create new user
+        password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        user = User(
+            username=data['username'],
+            email=data['email'],
+            password_hash=password_hash,
+            role=data['role'],
+            full_name=data['full_name'],
+            phone=data.get('phone', ''),
+            is_active=data.get('is_active', True)
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '사용자가 생성되었습니다'})
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        user_id = data.get('id')
+        
+        user = User.query.get_or_404(user_id)
+        
+        # Update user fields
+        if 'username' in data:
+            user.username = data['username']
+        if 'email' in data:
+            user.email = data['email']
+        if 'role' in data:
+            user.role = data['role']
+        if 'full_name' in data:
+            user.full_name = data['full_name']
+        if 'phone' in data:
+            user.phone = data['phone']
+        if 'is_active' in data:
+            user.is_active = data['is_active']
+        if 'password' in data and data['password']:
+            user.password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '사용자가 수정되었습니다'})
+    
+    elif request.method == 'DELETE':
+        user_id = request.get_json().get('id')
+        user = User.query.get_or_404(user_id)
+        
+        # Don't allow deletion of admin users
+        if user.role == 'admin':
+            return jsonify({'error': '관리자 계정은 삭제할 수 없습니다'}), 400
+        
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '사용자가 삭제되었습니다'})
+
+@app.route('/api/admin/carriers', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def admin_carriers():
+    """Admin carrier management API"""
+    if request.method == 'GET':
+        carriers = Carrier.query.all()
+        result = []
+        for carrier in carriers:
+            result.append({
+                'id': carrier.id,
+                'user_id': carrier.user_id,
+                'username': carrier.user.username,
+                'company_name': carrier.company_name,
+                'business_license': carrier.business_license,
+                'contact_person': carrier.contact_person,
+                'address': carrier.address,
+                'status': carrier.status,
+                'created_at': carrier.created_at.isoformat()
+            })
+        return jsonify(result)
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        carrier = Carrier(
+            user_id=data['user_id'],
+            company_name=data['company_name'],
+            business_license=data.get('business_license', ''),
+            contact_person=data.get('contact_person', ''),
+            address=data.get('address', ''),
+            status=data.get('status', 'active')
+        )
+        
+        db.session.add(carrier)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '운송사가 생성되었습니다'})
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        carrier_id = data.get('id')
+        
+        carrier = Carrier.query.get_or_404(carrier_id)
+        
+        # Update carrier fields
+        if 'company_name' in data:
+            carrier.company_name = data['company_name']
+        if 'business_license' in data:
+            carrier.business_license = data['business_license']
+        if 'contact_person' in data:
+            carrier.contact_person = data['contact_person']
+        if 'address' in data:
+            carrier.address = data['address']
+        if 'status' in data:
+            carrier.status = data['status']
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '운송사가 수정되었습니다'})
+    
+    elif request.method == 'DELETE':
+        carrier_id = request.get_json().get('id')
+        carrier = Carrier.query.get_or_404(carrier_id)
+        
+        db.session.delete(carrier)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '운송사가 삭제되었습니다'})
+
+@app.route('/api/admin/drivers', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def admin_drivers():
+    """Admin driver management API"""
+    if request.method == 'GET':
+        drivers = Driver.query.all()
+        result = []
+        for driver in drivers:
+            result.append({
+                'id': driver.id,
+                'user_id': driver.user_id,
+                'username': driver.user.username,
+                'carrier_id': driver.carrier_id,
+                'carrier_name': driver.carrier.company_name,
+                'license_number': driver.license_number,
+                'vehicle_type': driver.vehicle_type,
+                'vehicle_number': driver.vehicle_number,
+                'status': driver.status,
+                'current_location': driver.current_location,
+                'created_at': driver.created_at.isoformat()
+            })
+        return jsonify(result)
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        
+        driver = Driver(
+            user_id=data['user_id'],
+            carrier_id=data['carrier_id'],
+            license_number=data['license_number'],
+            vehicle_type=data.get('vehicle_type', ''),
+            vehicle_number=data.get('vehicle_number', ''),
+            status=data.get('status', 'available')
+        )
+        
+        db.session.add(driver)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '기사가 생성되었습니다'})
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        driver_id = data.get('id')
+        
+        driver = Driver.query.get_or_404(driver_id)
+        
+        # Update driver fields
+        if 'carrier_id' in data:
+            driver.carrier_id = data['carrier_id']
+        if 'license_number' in data:
+            driver.license_number = data['license_number']
+        if 'vehicle_type' in data:
+            driver.vehicle_type = data['vehicle_type']
+        if 'vehicle_number' in data:
+            driver.vehicle_number = data['vehicle_number']
+        if 'status' in data:
+            driver.status = data['status']
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '기사가 수정되었습니다'})
+    
+    elif request.method == 'DELETE':
+        driver_id = request.get_json().get('id')
+        driver = Driver.query.get_or_404(driver_id)
+        
+        db.session.delete(driver)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '기사가 삭제되었습니다'})
+
+@app.route('/api/admin/statistics', methods=['GET'])
+@login_required
+@role_required('admin')
+def admin_statistics():
+    """Admin statistics API"""
+    
+    # Basic counts
+    total_users = User.query.count()
+    total_carriers = Carrier.query.count()
+    total_drivers = Driver.query.count()
+    active_tolerances = Tolerance.query.filter_by(status='available').count()
+    pending_requests = DeliveryRequest.query.filter_by(status='pending').count()
+    total_matches = Match.query.count()
+    completed_matches = Match.query.filter_by(status='completed').count()
+    
+    # Monthly statistics
+    current_month = datetime.now().replace(day=1)
+    monthly_tolerances = Tolerance.query.filter(Tolerance.created_at >= current_month).count()
+    monthly_requests = DeliveryRequest.query.filter(DeliveryRequest.created_at >= current_month).count()
+    monthly_matches = Match.query.filter(Match.matched_at >= current_month).count()
+    
+    # Status breakdown
+    tolerance_status = {}
+    for status in ['available', 'matched', 'completed']:
+        tolerance_status[status] = Tolerance.query.filter_by(status=status).count()
+    
+    request_status = {}
+    for status in ['pending', 'matched', 'in_transit', 'completed']:
+        request_status[status] = DeliveryRequest.query.filter_by(status=status).count()
+    
+    match_status = {}
+    for status in ['proposed', 'accepted', 'rejected', 'in_progress', 'completed']:
+        match_status[status] = Match.query.filter_by(status=status).count()
+    
+    # Top performing carriers
+    top_carriers = db.session.query(
+        Carrier.company_name,
+        db.func.count(Match.id).label('match_count')
+    ).join(
+        Tolerance, Carrier.id == Tolerance.carrier_id
+    ).join(
+        Match, Tolerance.id == Match.tolerance_id
+    ).group_by(Carrier.id).order_by(db.func.count(Match.id).desc()).limit(5).all()
+    
+    return jsonify({
+        'overview': {
+            'total_users': total_users,
+            'total_carriers': total_carriers,
+            'total_drivers': total_drivers,
+            'active_tolerances': active_tolerances,
+            'pending_requests': pending_requests,
+            'total_matches': total_matches,
+            'completed_matches': completed_matches
+        },
+        'monthly': {
+            'tolerances': monthly_tolerances,
+            'requests': monthly_requests,
+            'matches': monthly_matches
+        },
+        'status_breakdown': {
+            'tolerances': tolerance_status,
+            'requests': request_status,
+            'matches': match_status
+        },
+        'top_carriers': [{'name': name, 'matches': count} for name, count in top_carriers]
+    })
+
 # Create tables and sample data
 with app.app_context():
     db.create_all()
