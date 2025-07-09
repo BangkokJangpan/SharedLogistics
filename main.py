@@ -529,7 +529,7 @@ def auto_match():
         'message': f'{matches_created}개의 매칭이 생성되었습니다'
     })
 
-# Create tables and default admin user
+# Create tables and sample data
 with app.app_context():
     db.create_all()
     
@@ -547,6 +547,170 @@ with app.app_context():
         db.session.add(admin_user)
         db.session.commit()
         logging.info("Default admin user created")
+    
+    # Create sample data if not exists
+    if User.query.count() == 1:  # Only admin user exists
+        # Create sample carriers
+        carrier1_password = bcrypt.hashpw('carrier1'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        carrier1_user = User(
+            username='carrier1',
+            email='carrier1@example.com',
+            password_hash=carrier1_password,
+            role='carrier',
+            full_name='김철수',
+            phone='010-1234-5678'
+        )
+        db.session.add(carrier1_user)
+        db.session.commit()
+        
+        carrier1 = Carrier(
+            user_id=carrier1_user.id,
+            company_name='한국해운물류',
+            business_license='123-45-67890',
+            contact_person='김철수',
+            address='부산광역시 중구 중앙대로 123'
+        )
+        db.session.add(carrier1)
+        
+        carrier2_password = bcrypt.hashpw('carrier2'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        carrier2_user = User(
+            username='carrier2',
+            email='carrier2@example.com',
+            password_hash=carrier2_password,
+            role='carrier',
+            full_name='이영희',
+            phone='010-2345-6789'
+        )
+        db.session.add(carrier2_user)
+        db.session.commit()
+        
+        carrier2 = Carrier(
+            user_id=carrier2_user.id,
+            company_name='태평양운송',
+            business_license='234-56-78901',
+            contact_person='이영희',
+            address='인천광역시 연수구 송도동 456'
+        )
+        db.session.add(carrier2)
+        db.session.commit()
+        
+        # Create sample drivers
+        driver1_password = bcrypt.hashpw('driver1'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        driver1_user = User(
+            username='driver1',
+            email='driver1@example.com',
+            password_hash=driver1_password,
+            role='driver',
+            full_name='박민수',
+            phone='010-3456-7890'
+        )
+        db.session.add(driver1_user)
+        db.session.commit()
+        
+        driver1 = Driver(
+            user_id=driver1_user.id,
+            carrier_id=carrier1.id,
+            license_number='11-23-456789',
+            vehicle_type='트레일러',
+            vehicle_number='부산12가3456',
+            status='available'
+        )
+        db.session.add(driver1)
+        
+        driver2_password = bcrypt.hashpw('driver2'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        driver2_user = User(
+            username='driver2',
+            email='driver2@example.com',
+            password_hash=driver2_password,
+            role='driver',
+            full_name='정수현',
+            phone='010-4567-8901'
+        )
+        db.session.add(driver2_user)
+        db.session.commit()
+        
+        driver2 = Driver(
+            user_id=driver2_user.id,
+            carrier_id=carrier2.id,
+            license_number='22-34-567890',
+            vehicle_type='트레일러',
+            vehicle_number='인천34나5678',
+            status='available'
+        )
+        db.session.add(driver2)
+        db.session.commit()
+        
+        # Create sample tolerances
+        tolerance1 = Tolerance(
+            carrier_id=carrier1.id,
+            origin='람차방 항구',
+            destination='부산 신항',
+            departure_time=datetime.now() + timedelta(hours=2),
+            arrival_time=datetime.now() + timedelta(hours=8),
+            container_type='40ft',
+            container_count=2,
+            is_empty_run=False,
+            price=500000,
+            status='available'
+        )
+        db.session.add(tolerance1)
+        
+        tolerance2 = Tolerance(
+            carrier_id=carrier2.id,
+            origin='람차방 항구',
+            destination='인천항',
+            departure_time=datetime.now() + timedelta(hours=4),
+            arrival_time=datetime.now() + timedelta(hours=12),
+            container_type='20ft',
+            container_count=3,
+            is_empty_run=True,
+            price=300000,
+            status='available'
+        )
+        db.session.add(tolerance2)
+        
+        # Create sample delivery requests
+        request1 = DeliveryRequest(
+            carrier_id=carrier1.id,
+            origin='람차방 항구',
+            destination='부산 신항',
+            pickup_time=datetime.now() + timedelta(hours=3),
+            delivery_time=datetime.now() + timedelta(hours=9),
+            container_type='40ft',
+            container_count=1,
+            cargo_details_json='{"type": "전자제품", "weight": "15톤", "special_handling": "냉장보관"}',
+            budget=450000,
+            status='pending'
+        )
+        db.session.add(request1)
+        
+        request2 = DeliveryRequest(
+            carrier_id=carrier2.id,
+            origin='람차방 항구',
+            destination='인천항',
+            pickup_time=datetime.now() + timedelta(hours=5),
+            delivery_time=datetime.now() + timedelta(hours=13),
+            container_type='20ft',
+            container_count=2,
+            cargo_details_json='{"type": "의류", "weight": "8톤", "special_handling": "건조보관"}',
+            budget=280000,
+            status='pending'
+        )
+        db.session.add(request2)
+        
+        # Create sample matches
+        match1 = Match(
+            tolerance_id=tolerance1.id,
+            request_id=request1.id,
+            driver_id=driver1.id,
+            status='proposed'
+        )
+        db.session.add(match1)
+        
+        db.session.commit()
+        logging.info("Sample data created")
+    
+    logging.info("Database initialization completed")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

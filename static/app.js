@@ -1,70 +1,79 @@
 // Global variables
 let currentUser = null;
-let toleranceModal = null;
-let requestModal = null;
+let currentUserRole = null;
 
-// Initialize the application
+// Initialize the app
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Bootstrap modals
-    toleranceModal = new bootstrap.Modal(document.getElementById('toleranceModal'));
-    requestModal = new bootstrap.Modal(document.getElementById('requestModal'));
-    
-    // Check if user is logged in
     checkAuthStatus();
-    
-    // Setup event listeners
     setupEventListeners();
 });
 
 // Check authentication status
 function checkAuthStatus() {
-    // Check if user data is passed from server
-    if (typeof user !== 'undefined' && user) {
-        currentUser = user;
+    // Check if user is logged in (this would be done via session in a real app)
+    const token = sessionStorage.getItem('auth_token');
+    if (token) {
+        // For now, we'll just show the main section
+        // In a real app, we'd validate the token with the server
         showMainSection();
     } else {
         showLoginSection();
     }
 }
 
-// Setup event listeners
+// Set up event listeners
 function setupEventListeners() {
     // Login form
-    document.getElementById('login-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        login();
-    });
+    document.getElementById('login-form').addEventListener('submit', login);
     
     // Register form
-    document.getElementById('register-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        register();
+    document.getElementById('register-form').addEventListener('submit', register);
+    
+    // Show register section
+    document.getElementById('show-register-btn').addEventListener('click', showRegisterSection);
+    
+    // Back to login
+    document.getElementById('back-to-login').addEventListener('click', showLoginForm);
+    
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', function() {
+        sessionStorage.removeItem('auth_token');
+        currentUser = null;
+        currentUserRole = null;
+        showLoginSection();
     });
     
-    // Role change in registration
-    document.getElementById('reg-role').addEventListener('change', function() {
-        toggleRoleFields();
+    // Role selection change
+    document.getElementById('reg-role').addEventListener('change', toggleRoleFields);
+    
+    // Tab change listeners
+    document.getElementById('tolerances-tab').addEventListener('click', function() {
+        setTimeout(loadTolerances, 100);
     });
     
-    // Tab change event
-    document.querySelectorAll('#main-tabs button').forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(event) {
-            const target = event.target.getAttribute('data-bs-target');
-            if (target === '#dashboard') {
-                loadDashboard();
-            } else if (target === '#tolerances') {
-                loadTolerances();
-            } else if (target === '#requests') {
-                loadRequests();
-            } else if (target === '#matches') {
-                loadMatches();
-            }
-        });
+    document.getElementById('requests-tab').addEventListener('click', function() {
+        setTimeout(loadRequests, 100);
     });
+    
+    document.getElementById('matches-tab').addEventListener('click', function() {
+        setTimeout(loadMatches, 100);
+    });
+    
+    // Modal buttons
+    document.getElementById('add-tolerance-btn').addEventListener('click', showToleranceForm);
+    document.getElementById('add-request-btn').addEventListener('click', showRequestForm);
+    document.getElementById('save-tolerance').addEventListener('click', submitTolerance);
+    document.getElementById('save-request').addEventListener('click', submitRequest);
+    
+    // Auto match buttons
+    document.getElementById('auto-match-btn').addEventListener('click', autoMatch);
+    document.getElementById('auto-match-admin-btn').addEventListener('click', autoMatch);
 }
 
 // Login function
-async function login() {
+async function login(e) {
+    e.preventDefault();
+    
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
@@ -72,7 +81,7 @@ async function login() {
         const response = await fetch('/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({ username, password })
         });
@@ -81,45 +90,48 @@ async function login() {
         
         if (data.success) {
             currentUser = data.user;
+            currentUserRole = data.user.role;
+            sessionStorage.setItem('auth_token', 'dummy_token'); // In real app, store actual token
             showMainSection();
-            showAlert('로그인 성공', 'success');
+            showAlert('로그인에 성공했습니다!', 'success');
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '로그인에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('로그인 중 오류가 발생했습니다', 'danger');
-        console.error('Login error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
 // Register function
-async function register() {
+async function register(e) {
+    e.preventDefault();
+    
     const formData = {
         username: document.getElementById('reg-username').value,
         email: document.getElementById('reg-email').value,
         password: document.getElementById('reg-password').value,
-        full_name: document.getElementById('reg-full-name').value,
-        role: document.getElementById('reg-role').value,
-        phone: document.getElementById('reg-phone').value
+        full_name: document.getElementById('reg-fullname').value,
+        phone: document.getElementById('reg-phone').value,
+        role: document.getElementById('reg-role').value
     };
     
     // Add role-specific fields
     if (formData.role === 'carrier') {
-        formData.company_name = document.getElementById('reg-company-name').value;
-        formData.business_license = document.getElementById('reg-business-license').value;
-        formData.address = document.getElementById('reg-address').value;
+        formData.company_name = document.getElementById('company-name').value;
+        formData.business_license = document.getElementById('business-license').value;
+        formData.address = document.getElementById('address').value;
     } else if (formData.role === 'driver') {
-        formData.carrier_id = document.getElementById('reg-carrier-id').value;
-        formData.license_number = document.getElementById('reg-license-number').value;
-        formData.vehicle_type = document.getElementById('reg-vehicle-type').value;
-        formData.vehicle_number = document.getElementById('reg-vehicle-number').value;
+        formData.carrier_id = document.getElementById('carrier-id').value;
+        formData.license_number = document.getElementById('license-number').value;
+        formData.vehicle_type = document.getElementById('vehicle-type').value;
+        formData.vehicle_number = document.getElementById('vehicle-number').value;
     }
     
     try {
         const response = await fetch('/register', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify(formData)
         });
@@ -127,53 +139,46 @@ async function register() {
         const data = await response.json();
         
         if (data.success) {
-            showAlert(data.message, 'success');
+            showAlert('계정이 성공적으로 생성되었습니다!', 'success');
             showLoginForm();
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '계정 생성에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('등록 중 오류가 발생했습니다', 'danger');
-        console.error('Register error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
-// Show different sections
+// Show sections
 function showLoginSection() {
-    document.getElementById('login-section').classList.remove('hidden');
-    document.getElementById('register-section').classList.add('hidden');
-    document.getElementById('main-section').classList.add('hidden');
-    document.getElementById('user-menu').classList.add('hidden');
+    document.getElementById('login-section').style.display = 'block';
+    document.getElementById('register-section').style.display = 'none';
+    document.getElementById('main-section').style.display = 'none';
 }
 
 function showRegisterSection() {
-    document.getElementById('login-section').classList.add('hidden');
-    document.getElementById('register-section').classList.remove('hidden');
-    document.getElementById('main-section').classList.add('hidden');
-    document.getElementById('user-menu').classList.add('hidden');
-    
-    // Load carriers for driver registration
-    loadCarriers();
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('register-section').style.display = 'block';
+    document.getElementById('main-section').style.display = 'none';
+    loadCarriers(); // Load carriers for driver registration
 }
 
 function showMainSection() {
-    document.getElementById('login-section').classList.add('hidden');
-    document.getElementById('register-section').classList.add('hidden');
-    document.getElementById('main-section').classList.remove('hidden');
-    document.getElementById('user-menu').classList.remove('hidden');
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('register-section').style.display = 'none';
+    document.getElementById('main-section').style.display = 'block';
     
     // Update user info
-    document.getElementById('user-name').textContent = currentUser.full_name;
-    document.getElementById('user-role').textContent = getRoleText(currentUser.role);
+    if (currentUser) {
+        document.getElementById('user-info').textContent = `${currentUser.full_name} (${getRoleText(currentUser.role)})`;
+        document.getElementById('logout-btn').style.display = 'inline-block';
+    }
     
-    // Show/hide tabs based on role
     setupRoleBasedUI();
-    
-    // Load dashboard
     loadDashboard();
+    loadTolerances();
 }
 
-// Form navigation
 function showLoginForm() {
     showLoginSection();
 }
@@ -182,36 +187,40 @@ function showRegisterForm() {
     showRegisterSection();
 }
 
-// Role-based UI setup
+// Setup role-based UI
 function setupRoleBasedUI() {
-    const roleElements = document.querySelectorAll('.role-admin, .role-carrier, .role-driver');
+    if (!currentUser) return;
     
-    roleElements.forEach(element => {
-        element.classList.add('hidden');
-    });
+    const role = currentUser.role;
     
-    // Show elements for current user role
-    const currentRoleElements = document.querySelectorAll(`.role-${currentUser.role}`);
-    currentRoleElements.forEach(element => {
-        element.classList.remove('hidden');
-    });
+    // Show/hide buttons based on role
+    document.getElementById('add-tolerance-btn').style.display = role === 'carrier' ? 'inline-block' : 'none';
+    document.getElementById('add-request-btn').style.display = role === 'carrier' ? 'inline-block' : 'none';
+    document.getElementById('auto-match-btn').style.display = role === 'admin' ? 'inline-block' : 'none';
+    
+    // Show/hide admin tab
+    document.getElementById('admin-tab-item').style.display = role === 'admin' ? 'block' : 'none';
 }
 
-// Toggle role-specific fields in registration
+// Toggle role-specific fields
 function toggleRoleFields() {
     const role = document.getElementById('reg-role').value;
-    
-    document.getElementById('carrier-fields').classList.add('hidden');
-    document.getElementById('driver-fields').classList.add('hidden');
+    const carrierFields = document.getElementById('carrier-fields');
+    const driverFields = document.getElementById('driver-fields');
     
     if (role === 'carrier') {
-        document.getElementById('carrier-fields').classList.remove('hidden');
+        carrierFields.style.display = 'block';
+        driverFields.style.display = 'none';
     } else if (role === 'driver') {
-        document.getElementById('driver-fields').classList.remove('hidden');
+        carrierFields.style.display = 'none';
+        driverFields.style.display = 'block';
+    } else {
+        carrierFields.style.display = 'none';
+        driverFields.style.display = 'none';
     }
 }
 
-// Load dashboard data
+// Load dashboard
 async function loadDashboard() {
     try {
         const response = await fetch('/api/dashboard');
@@ -220,31 +229,30 @@ async function loadDashboard() {
         if (response.ok) {
             renderDashboard(data);
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '대시보드 로드에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('대시보드 로드 중 오류가 발생했습니다', 'danger');
-        console.error('Dashboard error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
 // Render dashboard
 function renderDashboard(data) {
-    const container = document.getElementById('dashboard-stats');
-    container.innerHTML = '';
+    const container = document.getElementById('dashboard-content');
+    let html = '';
     
     if (currentUser.role === 'admin') {
-        container.innerHTML = `
+        html = `
             <div class="col-md-3">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
-                        <h5 class="card-title">전체 사용자</h5>
+                        <h5 class="card-title">총 사용자</h5>
                         <h2 class="text-primary">${data.total_users}</h2>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">활성 여유 운송</h5>
                         <h2 class="text-success">${data.active_tolerances}</h2>
@@ -252,7 +260,7 @@ function renderDashboard(data) {
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">대기 중인 요청</h5>
                         <h2 class="text-warning">${data.pending_requests}</h2>
@@ -260,7 +268,7 @@ function renderDashboard(data) {
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">완료된 매칭</h5>
                         <h2 class="text-info">${data.completed_matches}</h2>
@@ -269,9 +277,9 @@ function renderDashboard(data) {
             </div>
         `;
     } else if (currentUser.role === 'carrier') {
-        container.innerHTML = `
+        html = `
             <div class="col-md-4">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">내 여유 운송</h5>
                         <h2 class="text-primary">${data.my_tolerances}</h2>
@@ -279,7 +287,7 @@ function renderDashboard(data) {
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">내 운송 요청</h5>
                         <h2 class="text-success">${data.my_requests}</h2>
@@ -287,7 +295,7 @@ function renderDashboard(data) {
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">내 매칭</h5>
                         <h2 class="text-info">${data.my_matches}</h2>
@@ -296,25 +304,25 @@ function renderDashboard(data) {
             </div>
         `;
     } else if (currentUser.role === 'driver') {
-        container.innerHTML = `
+        html = `
             <div class="col-md-4">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
-                        <h5 class="card-title">배정된 운송</h5>
-                        <h2 class="text-warning">${data.assigned_matches}</h2>
+                        <h5 class="card-title">할당된 작업</h5>
+                        <h2 class="text-primary">${data.assigned_matches}</h2>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
-                        <h5 class="card-title">완료된 운송</h5>
+                        <h5 class="card-title">완료된 작업</h5>
                         <h2 class="text-success">${data.completed_matches}</h2>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card dashboard-card">
+                <div class="card text-center">
                     <div class="card-body">
                         <h5 class="card-title">현재 상태</h5>
                         <h2 class="text-info">${getStatusText(data.current_status)}</h2>
@@ -323,6 +331,8 @@ function renderDashboard(data) {
             </div>
         `;
     }
+    
+    container.innerHTML = html;
 }
 
 // Load tolerances
@@ -334,34 +344,56 @@ async function loadTolerances() {
         if (response.ok) {
             renderTolerances(data);
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '여유 운송 로드에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('여유 운송 로드 중 오류가 발생했습니다', 'danger');
-        console.error('Tolerances error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
 // Render tolerances
 function renderTolerances(tolerances) {
-    const tbody = document.getElementById('tolerances-table');
-    tbody.innerHTML = '';
+    const container = document.getElementById('tolerances-list');
+    
+    if (tolerances.length === 0) {
+        container.innerHTML = '<p class="text-muted">등록된 여유 운송이 없습니다.</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>운송사</th>
+                    <th>출발지</th>
+                    <th>도착지</th>
+                    <th>출발시간</th>
+                    <th>컨테이너</th>
+                    <th>가격</th>
+                    <th>상태</th>
+                    <th>등록일</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
     
     tolerances.forEach(tolerance => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${tolerance.carrier_name}</td>
-            <td>${tolerance.origin}</td>
-            <td>${tolerance.destination}</td>
-            <td>${formatDateTime(tolerance.departure_time)}</td>
-            <td>${tolerance.container_type}</td>
-            <td>${tolerance.container_count}</td>
-            <td>${tolerance.is_empty_run ? '예' : '아니오'}</td>
-            <td>${tolerance.price ? tolerance.price.toLocaleString() + ' THB' : '-'}</td>
-            <td><span class="badge ${getStatusBadgeClass(tolerance.status)}">${getStatusText(tolerance.status)}</span></td>
+        html += `
+            <tr>
+                <td>${tolerance.carrier_name}</td>
+                <td>${tolerance.origin}</td>
+                <td>${tolerance.destination}</td>
+                <td>${formatDateTime(tolerance.departure_time)}</td>
+                <td>${tolerance.container_type} × ${tolerance.container_count}</td>
+                <td>₩${tolerance.price.toLocaleString()}</td>
+                <td><span class="badge ${getStatusBadgeClass(tolerance.status)}">${getStatusText(tolerance.status)}</span></td>
+                <td>${formatDateTime(tolerance.created_at)}</td>
+            </tr>
         `;
-        tbody.appendChild(row);
     });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
 
 // Load requests
@@ -373,33 +405,56 @@ async function loadRequests() {
         if (response.ok) {
             renderRequests(data);
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '운송 요청 로드에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('운송 요청 로드 중 오류가 발생했습니다', 'danger');
-        console.error('Requests error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
 // Render requests
 function renderRequests(requests) {
-    const tbody = document.getElementById('requests-table');
-    tbody.innerHTML = '';
+    const container = document.getElementById('requests-list');
+    
+    if (requests.length === 0) {
+        container.innerHTML = '<p class="text-muted">등록된 운송 요청이 없습니다.</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>운송사</th>
+                    <th>출발지</th>
+                    <th>도착지</th>
+                    <th>픽업시간</th>
+                    <th>컨테이너</th>
+                    <th>예산</th>
+                    <th>상태</th>
+                    <th>등록일</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
     
     requests.forEach(request => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${request.carrier_name}</td>
-            <td>${request.origin}</td>
-            <td>${request.destination}</td>
-            <td>${formatDateTime(request.pickup_time)}</td>
-            <td>${request.container_type}</td>
-            <td>${request.container_count}</td>
-            <td>${request.budget ? request.budget.toLocaleString() + ' THB' : '-'}</td>
-            <td><span class="badge ${getStatusBadgeClass(request.status)}">${getStatusText(request.status)}</span></td>
+        html += `
+            <tr>
+                <td>${request.carrier_name}</td>
+                <td>${request.origin}</td>
+                <td>${request.destination}</td>
+                <td>${formatDateTime(request.pickup_time)}</td>
+                <td>${request.container_type} × ${request.container_count}</td>
+                <td>₩${request.budget.toLocaleString()}</td>
+                <td><span class="badge ${getStatusBadgeClass(request.status)}">${getStatusText(request.status)}</span></td>
+                <td>${formatDateTime(request.created_at)}</td>
+            </tr>
         `;
-        tbody.appendChild(row);
     });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
 
 // Load matches
@@ -411,106 +466,102 @@ async function loadMatches() {
         if (response.ok) {
             renderMatches(data);
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '매칭 로드에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('매칭 로드 중 오류가 발생했습니다', 'danger');
-        console.error('Matches error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
 // Render matches
 function renderMatches(matches) {
-    const container = document.getElementById('matches-container');
-    container.innerHTML = '';
+    const container = document.getElementById('matches-list');
+    
+    if (matches.length === 0) {
+        container.innerHTML = '<p class="text-muted">매칭된 항목이 없습니다.</p>';
+        return;
+    }
+    
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>여유 운송</th>
+                    <th>운송 요청</th>
+                    <th>기사</th>
+                    <th>상태</th>
+                    <th>매칭일</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
     
     matches.forEach(match => {
-        const card = document.createElement('div');
-        card.className = 'card mb-3';
-        card.innerHTML = `
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <h6>여유 운송</h6>
-                        <p class="mb-1"><strong>경로:</strong> ${match.tolerance.origin} → ${match.tolerance.destination}</p>
-                        <p class="mb-1"><strong>출발:</strong> ${formatDateTime(match.tolerance.departure_time)}</p>
-                        <p class="mb-0"><strong>타입:</strong> ${match.tolerance.container_type}</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>운송 요청</h6>
-                        <p class="mb-1"><strong>경로:</strong> ${match.request.origin} → ${match.request.destination}</p>
-                        <p class="mb-1"><strong>픽업:</strong> ${formatDateTime(match.request.pickup_time)}</p>
-                        <p class="mb-0"><strong>타입:</strong> ${match.request.container_type}</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h6>매칭 정보</h6>
-                        <p class="mb-1"><strong>기사:</strong> ${match.driver.name || '미배정'}</p>
-                        <p class="mb-1"><strong>차량:</strong> ${match.driver.vehicle_number || '미배정'}</p>
-                        <p class="mb-1"><strong>상태:</strong> <span class="badge ${getStatusBadgeClass(match.status)}">${getStatusText(match.status)}</span></p>
-                        <div class="mt-2">
-                            ${getMatchActions(match)}
-                        </div>
-                    </div>
-                </div>
-            </div>
+        html += `
+            <tr>
+                <td>
+                    <strong>${match.tolerance.carrier_name}</strong><br>
+                    ${match.tolerance.origin} → ${match.tolerance.destination}<br>
+                    <small class="text-muted">${formatDateTime(match.tolerance.departure_time)}</small>
+                </td>
+                <td>
+                    <strong>${match.request.carrier_name}</strong><br>
+                    ${match.request.origin} → ${match.request.destination}<br>
+                    <small class="text-muted">${formatDateTime(match.request.pickup_time)}</small>
+                </td>
+                <td>${match.driver.name || '미배정'}<br><small class="text-muted">${match.driver.vehicle_number || ''}</small></td>
+                <td><span class="badge ${getStatusBadgeClass(match.status)}">${getStatusText(match.status)}</span></td>
+                <td>${formatDateTime(match.matched_at)}</td>
+                <td>${getMatchActions(match)}</td>
+            </tr>
         `;
-        container.appendChild(card);
     });
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
 
-// Get match actions based on status and user role
+// Get match actions
 function getMatchActions(match) {
-    if (currentUser.role === 'carrier' && match.status === 'proposed') {
+    if (match.status === 'proposed') {
         return `
-            <button class="btn btn-success btn-sm me-2" onclick="acceptMatch(${match.id})">
-                <i class="fas fa-check me-1"></i>수락
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="rejectMatch(${match.id})">
-                <i class="fas fa-times me-1"></i>거절
-            </button>
-        `;
-    } else if (currentUser.role === 'driver' && match.status === 'accepted') {
-        return `
-            <button class="btn btn-primary btn-sm" onclick="acceptMatch(${match.id})">
-                <i class="fas fa-play me-1"></i>운송 시작
-            </button>
+            <button class="btn btn-success btn-sm me-1" onclick="acceptMatch(${match.id})">수락</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectMatch(${match.id})">거절</button>
         `;
     }
-    return '';
+    return '-';
 }
 
-// Load carriers for registration
+// Load carriers
 async function loadCarriers() {
     try {
         const response = await fetch('/api/carriers');
         const data = await response.json();
         
         if (response.ok) {
-            const select = document.getElementById('reg-carrier-id');
-            select.innerHTML = '<option value="">선택하세요</option>';
+            const select = document.getElementById('carrier-id');
+            select.innerHTML = '<option value="">운송사를 선택하세요</option>';
             
             data.forEach(carrier => {
-                const option = document.createElement('option');
-                option.value = carrier.id;
-                option.textContent = carrier.company_name;
-                select.appendChild(option);
+                select.innerHTML += `<option value="${carrier.id}">${carrier.company_name}</option>`;
             });
         }
     } catch (error) {
-        console.error('Carriers load error:', error);
+        console.error('Error loading carriers:', error);
     }
 }
 
 // Show tolerance form
 function showToleranceForm() {
-    document.getElementById('tolerance-form').reset();
-    toleranceModal.show();
+    const modal = new bootstrap.Modal(document.getElementById('toleranceModal'));
+    modal.show();
 }
 
 // Show request form
 function showRequestForm() {
-    document.getElementById('request-form').reset();
-    requestModal.show();
+    const modal = new bootstrap.Modal(document.getElementById('requestModal'));
+    modal.show();
 }
 
 // Submit tolerance
@@ -521,16 +572,16 @@ async function submitTolerance() {
         departure_time: document.getElementById('tolerance-departure').value,
         arrival_time: document.getElementById('tolerance-arrival').value,
         container_type: document.getElementById('tolerance-container-type').value,
-        container_count: parseInt(document.getElementById('tolerance-count').value),
+        container_count: parseInt(document.getElementById('tolerance-container-count').value),
         price: parseFloat(document.getElementById('tolerance-price').value) || 0,
-        is_empty_run: document.getElementById('tolerance-empty').checked
+        is_empty_run: document.getElementById('tolerance-empty-run').checked
     };
     
     try {
         const response = await fetch('/api/tolerances', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify(formData)
         });
@@ -538,15 +589,14 @@ async function submitTolerance() {
         const data = await response.json();
         
         if (data.success) {
-            toleranceModal.hide();
-            showAlert(data.message, 'success');
+            showAlert('여유 운송이 등록되었습니다!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('toleranceModal')).hide();
             loadTolerances();
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '여유 운송 등록에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('여유 운송 등록 중 오류가 발생했습니다', 'danger');
-        console.error('Submit tolerance error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
@@ -558,19 +608,16 @@ async function submitRequest() {
         pickup_time: document.getElementById('request-pickup').value,
         delivery_time: document.getElementById('request-delivery').value,
         container_type: document.getElementById('request-container-type').value,
-        container_count: parseInt(document.getElementById('request-count').value),
+        container_count: parseInt(document.getElementById('request-container-count').value),
         budget: parseFloat(document.getElementById('request-budget').value) || 0,
-        cargo_details: {
-            type: document.getElementById('request-cargo-type').value,
-            weight: parseFloat(document.getElementById('request-cargo-weight').value) || 0
-        }
+        cargo_details: document.getElementById('request-cargo-details').value
     };
     
     try {
         const response = await fetch('/api/delivery-requests', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify(formData)
         });
@@ -578,15 +625,14 @@ async function submitRequest() {
         const data = await response.json();
         
         if (data.success) {
-            requestModal.hide();
-            showAlert(data.message, 'success');
+            showAlert('운송 요청이 등록되었습니다!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('requestModal')).hide();
             loadRequests();
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '운송 요청 등록에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('운송 요청 등록 중 오류가 발생했습니다', 'danger');
-        console.error('Submit request error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
@@ -594,20 +640,22 @@ async function submitRequest() {
 async function acceptMatch(matchId) {
     try {
         const response = await fetch(`/api/matches/${matchId}/accept`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
         });
         
         const data = await response.json();
         
         if (data.success) {
-            showAlert(data.message, 'success');
+            showAlert('매칭이 수락되었습니다!', 'success');
             loadMatches();
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '매칭 수락에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('매칭 수락 중 오류가 발생했습니다', 'danger');
-        console.error('Accept match error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
@@ -620,9 +668,32 @@ async function rejectMatch(matchId) {
         const response = await fetch(`/api/matches/${matchId}/reject`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({ reason })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('매칭이 거절되었습니다.', 'success');
+            loadMatches();
+        } else {
+            showAlert(data.error || '매칭 거절에 실패했습니다.', 'danger');
+        }
+    } catch (error) {
+        showAlert('서버 오류가 발생했습니다.', 'danger');
+    }
+}
+
+// Auto match
+async function autoMatch() {
+    try {
+        const response = await fetch('/api/auto-match', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
         });
         
         const data = await response.json();
@@ -631,100 +702,68 @@ async function rejectMatch(matchId) {
             showAlert(data.message, 'success');
             loadMatches();
         } else {
-            showAlert(data.error, 'danger');
+            showAlert(data.error || '자동 매칭에 실패했습니다.', 'danger');
         }
     } catch (error) {
-        showAlert('매칭 거절 중 오류가 발생했습니다', 'danger');
-        console.error('Reject match error:', error);
+        showAlert('서버 오류가 발생했습니다.', 'danger');
     }
 }
 
-// Auto match (admin only)
-async function autoMatch() {
-    try {
-        const response = await fetch('/api/auto-match', {
-            method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showAlert(`${data.matches_created}개의 매칭이 생성되었습니다`, 'success');
-            loadMatches();
-        } else {
-            showAlert(data.error, 'danger');
-        }
-    } catch (error) {
-        showAlert('자동 매칭 중 오류가 발생했습니다', 'danger');
-        console.error('Auto match error:', error);
-    }
-}
-
-// Update location (driver only)
+// Update location (for drivers)
 function updateLocation() {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            async function(position) {
-                const latitude = position.coords.latitude;
-                const longitude = position.coords.longitude;
+        navigator.geolocation.getCurrentPosition(async function(position) {
+            const formData = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+            
+            try {
+                const response = await fetch('/api/location/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
                 
-                try {
-                    const response = await fetch('/api/location', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ latitude, longitude })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        showAlert(data.message, 'success');
-                        document.getElementById('location-status').innerHTML = `
-                            <small class="text-success">
-                                <i class="fas fa-map-marker-alt me-1"></i>
-                                위치 업데이트됨<br>
-                                위도: ${latitude.toFixed(6)}<br>
-                                경도: ${longitude.toFixed(6)}
-                            </small>
-                        `;
-                    } else {
-                        showAlert(data.error, 'danger');
-                    }
-                } catch (error) {
-                    showAlert('위치 업데이트 중 오류가 발생했습니다', 'danger');
-                    console.error('Location update error:', error);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('위치가 업데이트되었습니다.', 'success');
+                } else {
+                    showAlert(data.error || '위치 업데이트에 실패했습니다.', 'danger');
                 }
-            },
-            function(error) {
-                showAlert('위치 정보를 가져올 수 없습니다', 'danger');
+            } catch (error) {
+                showAlert('서버 오류가 발생했습니다.', 'danger');
             }
-        );
+        });
     } else {
-        showAlert('이 브라우저는 위치 정보를 지원하지 않습니다', 'danger');
+        showAlert('위치 서비스를 사용할 수 없습니다.', 'warning');
     }
 }
 
-// Utility functions
+// Show alert
 function showAlert(message, type) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
+    const alertContainer = document.getElementById('alert-container');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    // Insert at the top of the container
-    const container = document.querySelector('.container');
-    container.insertBefore(alertDiv, container.firstChild);
+    alertContainer.appendChild(alert);
     
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
-        alertDiv.remove();
+        if (alert.parentNode) {
+            alert.remove();
+        }
     }, 5000);
 }
 
+// Utility functions
 function formatDateTime(isoString) {
     const date = new Date(isoString);
     return date.toLocaleString('ko-KR');
@@ -744,12 +783,11 @@ function getStatusText(status) {
         'available': '사용 가능',
         'pending': '대기 중',
         'matched': '매칭됨',
-        'in_transit': '운송 중',
-        'completed': '완료',
         'proposed': '제안됨',
         'accepted': '수락됨',
         'rejected': '거절됨',
         'in_progress': '진행 중',
+        'completed': '완료됨',
         'active': '활성'
     };
     return statusMap[status] || status;
@@ -760,12 +798,11 @@ function getStatusBadgeClass(status) {
         'available': 'bg-success',
         'pending': 'bg-warning',
         'matched': 'bg-info',
-        'in_transit': 'bg-primary',
-        'completed': 'bg-secondary',
-        'proposed': 'bg-info',
+        'proposed': 'bg-primary',
         'accepted': 'bg-success',
         'rejected': 'bg-danger',
-        'in_progress': 'bg-primary',
+        'in_progress': 'bg-warning',
+        'completed': 'bg-success',
         'active': 'bg-success'
     };
     return classMap[status] || 'bg-secondary';
