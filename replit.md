@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a Flask-based web application for a shared logistics system at Laem Chabang Port. The system appears to be designed for managing logistics operations with user authentication, role-based access control, and real-time features. The application supports multiple user roles (admin, carrier, driver) and includes features for tracking, requests, and dashboard management.
+This is a Flask-based web application for a shared logistics system at Laem Chabang Port. The system is designed for managing logistics operations with user authentication, role-based access control, and real-time features. The application supports multiple user roles (admin, carrier, driver) and includes features for tracking, requests, and dashboard management.
 
 ## User Preferences
 
@@ -24,11 +24,19 @@ Preferred communication style: Simple, everyday language.
 - **State Management**: Client-side JavaScript with global variables for user state
 
 ### Database Schema
-The application uses a User model with the following structure:
-- User roles: admin, carrier, driver
-- Authentication fields: username, email, password_hash
-- Profile information: full_name, phone, is_active status
-- Timestamps: created_at for user registration tracking
+The application uses a comprehensive database schema with the following models:
+- **User**: Base user authentication and profile information
+- **Carrier**: Company-specific information for transport carriers
+- **Driver**: Individual driver profiles linked to carriers
+- **Tolerance**: Available transport capacity sharing
+- **DeliveryRequest**: Transport requests from carriers
+- **Match**: Matching system between tolerances and requests
+- **LocationPath**: Real-time location tracking for deliveries
+
+### Project Structure (3 Files)
+- **app.py**: Flask application initialization and database setup
+- **models.py**: Database models and relationships
+- **main.py**: Routes, authentication, and business logic
 
 ## Key Components
 

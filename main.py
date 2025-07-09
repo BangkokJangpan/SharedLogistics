@@ -1,163 +1,20 @@
-import os
-import logging
+from app import app, db
+from models import User, Carrier, Driver, Tolerance, DeliveryRequest, Match, LocationPath
 from datetime import datetime, timedelta
 from functools import wraps
 import json
 import bcrypt
 import jwt
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import text, Numeric
-from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import render_template, request, jsonify, session, redirect, url_for
+import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
-class Base(DeclarativeBase):
-    pass
-
-# Initialize Flask app
-app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "laem-chabang-logistics-secret-key")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-
-# Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "postgresql://user:password@localhost/logistics_db")
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    'pool_pre_ping': True,
-    "pool_recycle": 300,
-}
-
 # JWT Configuration
 app.config['JWT_SECRET_KEY'] = os.environ.get("JWT_SECRET_KEY", "jwt-secret-key")
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
-
-db = SQLAlchemy(app, model_class=Base)
-
-# Models
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # admin, carrier, driver
-    full_name = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20))
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class Carrier(db.Model):
-    __tablename__ = 'carriers'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    company_name = db.Column(db.String(100), nullable=False)
-    business_license = db.Column(db.String(50))
-    contact_person = db.Column(db.String(100))
-    address = db.Column(db.Text)
-    status = db.Column(db.String(20), default='active')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    user = db.relationship('User', backref='carrier_profile')
-
-class Driver(db.Model):
-    __tablename__ = 'drivers'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    carrier_id = db.Column(db.Integer, db.ForeignKey('carriers.id'), nullable=False)
-    license_number = db.Column(db.String(50), nullable=False)
-    vehicle_type = db.Column(db.String(50))
-    vehicle_number = db.Column(db.String(20))
-    status = db.Column(db.String(20), default='available')
-    current_location = db.Column(db.Text)  # JSON string for lat/lng
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    user = db.relationship('User', backref='driver_profile')
-    carrier = db.relationship('Carrier', backref='drivers')
-
-class Tolerance(db.Model):
-    __tablename__ = 'tolerances'
-    id = db.Column(db.Integer, primary_key=True)
-    carrier_id = db.Column(db.Integer, db.ForeignKey('carriers.id'), nullable=False)
-    origin = db.Column(db.String(100), nullable=False)
-    destination = db.Column(db.String(100), nullable=False)
-    departure_time = db.Column(db.DateTime, nullable=False)
-    arrival_time = db.Column(db.DateTime)
-    container_type = db.Column(db.String(50), nullable=False)
-    container_count = db.Column(db.Integer, default=1)
-    is_empty_run = db.Column(db.Boolean, default=False)
-    price = db.Column(Numeric(10, 2))
-    status = db.Column(db.String(20), default='available')  # available, matched, completed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    carrier = db.relationship('Carrier', backref='tolerances')
-
-class DeliveryRequest(db.Model):
-    __tablename__ = 'delivery_requests'
-    id = db.Column(db.Integer, primary_key=True)
-    carrier_id = db.Column(db.Integer, db.ForeignKey('carriers.id'), nullable=False)
-    origin = db.Column(db.String(100), nullable=False)
-    destination = db.Column(db.String(100), nullable=False)
-    pickup_time = db.Column(db.DateTime, nullable=False)
-    delivery_time = db.Column(db.DateTime)
-    container_type = db.Column(db.String(50), nullable=False)
-    container_count = db.Column(db.Integer, default=1)
-    cargo_details_json = db.Column(db.Text)  # JSON string for cargo details
-    budget = db.Column(Numeric(10, 2))
-    status = db.Column(db.String(20), default='pending')  # pending, matched, in_transit, completed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    carrier = db.relationship('Carrier', backref='delivery_requests')
-
-class Match(db.Model):
-    __tablename__ = 'matches'
-    id = db.Column(db.Integer, primary_key=True)
-    tolerance_id = db.Column(db.Integer, db.ForeignKey('tolerances.id'), nullable=False)
-    request_id = db.Column(db.Integer, db.ForeignKey('delivery_requests.id'), nullable=False)
-    driver_id = db.Column(db.Integer, db.ForeignKey('drivers.id'))
-    status = db.Column(db.String(20), default='proposed')  # proposed, accepted, rejected, in_progress, completed
-    matched_at = db.Column(db.DateTime, default=datetime.utcnow)
-    accepted_at = db.Column(db.DateTime)
-    completed_at = db.Column(db.DateTime)
-    rejection_reason = db.Column(db.Text)
-    
-    tolerance = db.relationship('Tolerance', backref='matches')
-    request = db.relationship('DeliveryRequest', backref='matches')
-    driver = db.relationship('Driver', backref='assigned_matches')
-
-class LocationPath(db.Model):
-    __tablename__ = 'location_paths'
-    id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('matches.id'), nullable=False)
-    driver_id = db.Column(db.Integer, db.ForeignKey('drivers.id'), nullable=False)
-    latitude = db.Column(db.Float, nullable=False)
-    longitude = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    match = db.relationship('Match', backref='location_paths')
-    driver = db.relationship('Driver', backref='location_paths')
-
-# Create tables
-with app.app_context():
-    db.create_all()
-    
-    # Create default admin user if not exists
-    admin_user = User.query.filter_by(username='admin').first()
-    if not admin_user:
-        password_hash = bcrypt.hashpw('admin123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        admin_user = User(
-            username='admin',
-            email='admin@laemchabang-logistics.com',
-            password_hash=password_hash,
-            role='admin',
-            full_name='시스템 관리자'
-        )
-        db.session.add(admin_user)
-        db.session.commit()
-        logging.info("Default admin user created")
 
 # Auth helpers
 def generate_token(user_id, role):
@@ -423,7 +280,7 @@ def delivery_requests():
             return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
         
         data = request.get_json()
-        request_obj = DeliveryRequest(
+        delivery_request = DeliveryRequest(
             carrier_id=carrier.id,
             origin=data['origin'],
             destination=data['destination'],
@@ -435,7 +292,7 @@ def delivery_requests():
             budget=data.get('budget', 0)
         )
         
-        db.session.add(request_obj)
+        db.session.add(delivery_request)
         db.session.commit()
         
         return jsonify({'success': True, 'message': '운송 요청이 등록되었습니다'})
@@ -449,7 +306,6 @@ def delivery_requests():
     
     result = []
     for req in requests:
-        cargo_details = json.loads(req.cargo_details_json) if req.cargo_details_json else {}
         result.append({
             'id': req.id,
             'carrier_name': req.carrier.company_name,
@@ -459,7 +315,7 @@ def delivery_requests():
             'delivery_time': req.delivery_time.isoformat() if req.delivery_time else None,
             'container_type': req.container_type,
             'container_count': req.container_count,
-            'cargo_details': cargo_details,
+            'cargo_details': json.loads(req.cargo_details_json) if req.cargo_details_json else {},
             'budget': float(req.budget) if req.budget else 0,
             'status': req.status,
             'created_at': req.created_at.isoformat()
@@ -467,36 +323,11 @@ def delivery_requests():
     
     return jsonify(result)
 
-@app.route('/api/matches', methods=['GET', 'POST'])
+@app.route('/api/matches', methods=['GET'])
 @login_required
 def matches():
     user = request.user
     
-    if request.method == 'POST':
-        # Create a match (for admin or system)
-        data = request.get_json()
-        match = Match(
-            tolerance_id=data['tolerance_id'],
-            request_id=data['request_id'],
-            driver_id=data.get('driver_id')
-        )
-        
-        db.session.add(match)
-        
-        # Update status
-        tolerance = Tolerance.query.get(data['tolerance_id'])
-        request_obj = DeliveryRequest.query.get(data['request_id'])
-        
-        if tolerance:
-            tolerance.status = 'matched'
-        if request_obj:
-            request_obj.status = 'matched'
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': '매칭이 생성되었습니다'})
-    
-    # GET request
     if user.role == 'carrier':
         carrier = Carrier.query.filter_by(user_id=user.id).first()
         matches = Match.query.join(Tolerance).filter(Tolerance.carrier_id == carrier.id).all()
@@ -511,25 +342,27 @@ def matches():
         result.append({
             'id': match.id,
             'tolerance': {
+                'id': match.tolerance.id,
                 'origin': match.tolerance.origin,
                 'destination': match.tolerance.destination,
                 'departure_time': match.tolerance.departure_time.isoformat(),
-                'container_type': match.tolerance.container_type
+                'container_type': match.tolerance.container_type,
+                'carrier_name': match.tolerance.carrier.company_name
             },
             'request': {
+                'id': match.request.id,
                 'origin': match.request.origin,
                 'destination': match.request.destination,
                 'pickup_time': match.request.pickup_time.isoformat(),
-                'container_type': match.request.container_type
+                'container_type': match.request.container_type,
+                'carrier_name': match.request.carrier.company_name
             },
             'driver': {
                 'name': match.driver.user.full_name if match.driver else None,
                 'vehicle_number': match.driver.vehicle_number if match.driver else None
             },
             'status': match.status,
-            'matched_at': match.matched_at.isoformat(),
-            'accepted_at': match.accepted_at.isoformat() if match.accepted_at else None,
-            'completed_at': match.completed_at.isoformat() if match.completed_at else None
+            'matched_at': match.matched_at.isoformat()
         })
     
     return jsonify(result)
@@ -538,26 +371,22 @@ def matches():
 @login_required
 def accept_match(match_id):
     user = request.user
+    
     match = Match.query.get_or_404(match_id)
     
+    # Check if user has permission to accept this match
     if user.role == 'carrier':
-        # Carrier accepting the match
         carrier = Carrier.query.filter_by(user_id=user.id).first()
         if match.tolerance.carrier_id != carrier.id and match.request.carrier_id != carrier.id:
-            return jsonify({'error': '권한이 없습니다'}), 403
-        
-        match.status = 'accepted'
-        match.accepted_at = datetime.utcnow()
-        
-    elif user.role == 'driver':
-        # Driver accepting the assignment
-        driver = Driver.query.filter_by(user_id=user.id).first()
-        if match.driver_id != driver.id:
-            return jsonify({'error': '권한이 없습니다'}), 403
-        
-        match.status = 'in_progress'
-        match.request.status = 'in_transit'
-        
+            return jsonify({'error': '이 매칭을 수락할 권한이 없습니다'}), 403
+    
+    match.status = 'accepted'
+    match.accepted_at = datetime.utcnow()
+    
+    # Update tolerance and request status
+    match.tolerance.status = 'matched'
+    match.request.status = 'matched'
+    
     db.session.commit()
     
     return jsonify({'success': True, 'message': '매칭이 수락되었습니다'})
@@ -566,15 +395,15 @@ def accept_match(match_id):
 @login_required
 def reject_match(match_id):
     user = request.user
+    
     match = Match.query.get_or_404(match_id)
     data = request.get_json()
     
-    if user.role != 'carrier':
-        return jsonify({'error': '운송사만 매칭을 거절할 수 있습니다'}), 403
-    
-    carrier = Carrier.query.filter_by(user_id=user.id).first()
-    if match.tolerance.carrier_id != carrier.id and match.request.carrier_id != carrier.id:
-        return jsonify({'error': '권한이 없습니다'}), 403
+    # Check if user has permission to reject this match
+    if user.role == 'carrier':
+        carrier = Carrier.query.filter_by(user_id=user.id).first()
+        if match.tolerance.carrier_id != carrier.id and match.request.carrier_id != carrier.id:
+            return jsonify({'error': '이 매칭을 거절할 권한이 없습니다'}), 403
     
     match.status = 'rejected'
     match.rejection_reason = data.get('reason', '')
@@ -587,7 +416,7 @@ def reject_match(match_id):
     
     return jsonify({'success': True, 'message': '매칭이 거절되었습니다'})
 
-@app.route('/api/location', methods=['POST'])
+@app.route('/api/location/update', methods=['POST'])
 @login_required
 def update_location():
     user = request.user
@@ -600,21 +429,23 @@ def update_location():
         return jsonify({'error': '기사 정보를 찾을 수 없습니다'}), 404
     
     data = request.get_json()
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+    match_id = data.get('match_id')
+    
+    if not latitude or not longitude:
+        return jsonify({'error': '위치 정보가 필요합니다'}), 400
     
     # Update driver's current location
-    driver.current_location = json.dumps({
-        'latitude': data['latitude'],
-        'longitude': data['longitude']
-    })
+    driver.current_location = json.dumps({'latitude': latitude, 'longitude': longitude})
     
-    # If there's an active match, save to location path
-    active_match = Match.query.filter_by(driver_id=driver.id, status='in_progress').first()
-    if active_match:
+    # If match_id is provided, save location path
+    if match_id:
         location_path = LocationPath(
-            match_id=active_match.id,
+            match_id=match_id,
             driver_id=driver.id,
-            latitude=data['latitude'],
-            longitude=data['longitude']
+            latitude=latitude,
+            longitude=longitude
         )
         db.session.add(location_path)
     
@@ -622,19 +453,17 @@ def update_location():
     
     return jsonify({'success': True, 'message': '위치가 업데이트되었습니다'})
 
-@app.route('/api/location/<int:match_id>')
+@app.route('/api/location/path/<int:match_id>')
 @login_required
 def get_location_path(match_id):
-    match = Match.query.get_or_404(match_id)
-    
-    locations = LocationPath.query.filter_by(match_id=match_id).order_by(LocationPath.timestamp.desc()).limit(100).all()
+    paths = LocationPath.query.filter_by(match_id=match_id).order_by(LocationPath.timestamp).all()
     
     result = []
-    for location in locations:
+    for path in paths:
         result.append({
-            'latitude': location.latitude,
-            'longitude': location.longitude,
-            'timestamp': location.timestamp.isoformat()
+            'latitude': path.latitude,
+            'longitude': path.longitude,
+            'timestamp': path.timestamp.isoformat()
         })
     
     return jsonify(result)
@@ -649,16 +478,19 @@ def get_carriers():
         result.append({
             'id': carrier.id,
             'company_name': carrier.company_name,
-            'contact_person': carrier.contact_person,
-            'created_at': carrier.created_at.isoformat()
+            'contact_person': carrier.contact_person
         })
     
     return jsonify(result)
 
 @app.route('/api/auto-match', methods=['POST'])
-@role_required('admin')
+@login_required
 def auto_match():
     """Basic auto-matching algorithm"""
+    user = request.user
+    
+    if user.role != 'admin':
+        return jsonify({'error': '관리자만 자동 매칭을 실행할 수 있습니다'}), 403
     
     # Get available tolerances and pending requests
     tolerances = Tolerance.query.filter_by(status='available').all()
@@ -668,31 +500,53 @@ def auto_match():
     
     for tolerance in tolerances:
         for request in requests:
-            # Simple matching criteria
+            # Basic matching criteria
             if (tolerance.origin == request.origin and 
                 tolerance.destination == request.destination and
                 tolerance.container_type == request.container_type and
-                tolerance.departure_time <= request.pickup_time and
-                tolerance.container_count >= request.container_count):
+                tolerance.departure_time.date() == request.pickup_time.date()):
                 
-                # Create match
-                match = Match(
+                # Check if match already exists
+                existing_match = Match.query.filter_by(
                     tolerance_id=tolerance.id,
                     request_id=request.id
-                )
+                ).first()
                 
-                db.session.add(match)
-                
-                # Update statuses
-                tolerance.status = 'matched'
-                request.status = 'matched'
-                
-                matches_created += 1
-                break
+                if not existing_match:
+                    # Create new match
+                    match = Match(
+                        tolerance_id=tolerance.id,
+                        request_id=request.id,
+                        status='proposed'
+                    )
+                    db.session.add(match)
+                    matches_created += 1
     
     db.session.commit()
     
-    return jsonify({'success': True, 'matches_created': matches_created})
+    return jsonify({
+        'success': True,
+        'message': f'{matches_created}개의 매칭이 생성되었습니다'
+    })
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+# Create tables and default admin user
+with app.app_context():
+    db.create_all()
+    
+    # Create default admin user if not exists
+    admin_user = User.query.filter_by(username='admin').first()
+    if not admin_user:
+        password_hash = bcrypt.hashpw('admin123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        admin_user = User(
+            username='admin',
+            email='admin@laemchabang-logistics.com',
+            password_hash=password_hash,
+            role='admin',
+            full_name='시스템 관리자'
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        logging.info("Default admin user created")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
