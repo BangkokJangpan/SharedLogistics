@@ -40,7 +40,7 @@ function setupEventListeners() {
         sessionStorage.removeItem('auth_token');
         currentUser = null;
         currentUserRole = null;
-        showLoginSection();
+        onLogoutOrLoginFail();
     });
     
     // Role selection change
@@ -88,6 +88,9 @@ function setupEventListeners() {
     document.getElementById('drivers-tab').addEventListener('click', function() {
         setTimeout(loadAdminDrivers, 100);
     });
+    document.getElementById('vehicles-tab').addEventListener('click', function() {
+        setTimeout(loadAdminVehicles, 100);
+    });
 }
 
 // Login function
@@ -110,11 +113,13 @@ async function login(e) {
         
         if (data.success) {
             currentUser = data.user;
+            window.currentUser = data.user;
             currentUserRole = data.user.role;
             sessionStorage.setItem('auth_token', 'dummy_token'); // In real app, store actual token
-            showMainSection();
+            onLoginSuccess();
             showAlert('로그인에 성공했습니다!', 'success');
         } else {
+            onLogoutOrLoginFail();
             showAlert(data.error || '로그인에 실패했습니다.', 'danger');
         }
     } catch (error) {
@@ -219,7 +224,8 @@ function setupRoleBasedUI() {
     document.getElementById('auto-match-btn').style.display = role === 'admin' ? 'inline-block' : 'none';
     
     // Show/hide admin tab
-    document.getElementById('admin-tab-item').style.display = role === 'admin' ? 'block' : 'none';
+    const adminTab = document.getElementById('admin-tab-item');
+    if (adminTab) adminTab.style.display = role === 'admin' ? 'block' : 'none';
 }
 
 // Toggle role-specific fields
@@ -357,18 +363,12 @@ function renderDashboard(data) {
 
 // Load tolerances
 async function loadTolerances() {
-    try {
-        const response = await fetch('/api/tolerances');
-        const data = await response.json();
-        
-        if (response.ok) {
-            renderTolerances(data);
-        } else {
-            showAlert(data.error || '여유 운송 로드에 실패했습니다.', 'danger');
-        }
-    } catch (error) {
-        showAlert('서버 오류가 발생했습니다.', 'danger');
+    const res = await fetch('/api/tolerances');
+    let tolerances = await res.json();
+    if(window.currentUser && window.currentUser.role === 'carrier' && window.currentUser.carrier_id) {
+        tolerances = tolerances.filter(t => t.carrier_id == window.currentUser.carrier_id);
     }
+    renderTolerances(tolerances);
 }
 
 // Render tolerances
@@ -376,7 +376,7 @@ function renderTolerances(tolerances) {
     const container = document.getElementById('tolerances-list');
     
     if (tolerances.length === 0) {
-        container.innerHTML = '<p class="text-muted">등록된 여유 운송이 없습니다.</p>';
+        document.getElementById('tolerances-list').innerHTML = '<p class="text-muted">등록된 여유 운송이 없습니다.</p>';
         return;
     }
     
@@ -560,7 +560,7 @@ async function loadCarriers() {
         const data = await response.json();
         
         if (response.ok) {
-            const select = document.getElementById('carrier-id');
+            const select = document.getElementById('carrier-id-select');
             select.innerHTML = '<option value="">운송사를 선택하세요</option>';
             
             data.forEach(carrier => {
@@ -586,15 +586,24 @@ function showRequestForm() {
 
 // Submit tolerance
 async function submitTolerance() {
+    const origin = document.getElementById('tolerance-origin-1').value;
+    const destination = document.getElementById('tolerance-destination-1').value;
+    const departure = document.getElementById('tolerance-departure-1').value;
+    const arrival = document.getElementById('tolerance-arrival-1').value;
+    const containerType = document.getElementById('tolerance-container-type-1').value;
+    const containerCount = document.getElementById('tolerance-container-count-1').value;
+    const price = document.getElementById('tolerance-price-1').value;
+    const isEmptyRun = document.getElementById('tolerance-empty-run-1').checked;
+    
     const formData = {
-        origin: document.getElementById('tolerance-origin').value,
-        destination: document.getElementById('tolerance-destination').value,
-        departure_time: document.getElementById('tolerance-departure').value,
-        arrival_time: document.getElementById('tolerance-arrival').value,
-        container_type: document.getElementById('tolerance-container-type').value,
-        container_count: parseInt(document.getElementById('tolerance-container-count').value),
-        price: parseFloat(document.getElementById('tolerance-price').value) || 0,
-        is_empty_run: document.getElementById('tolerance-empty-run').checked
+        origin: origin,
+        destination: destination,
+        departure_time: departure,
+        arrival_time: arrival,
+        container_type: containerType,
+        container_count: containerCount,
+        price: price,
+        is_empty_run: isEmptyRun
     };
     
     try {
@@ -1251,4 +1260,71 @@ function deleteDriver(driverId) {
     if (confirm('정말로 이 기사를 삭제하시겠습니까?')) {
         showAlert('기사 삭제 기능은 구현 중입니다.', 'info');
     }
+}
+
+// Admin 차량 관리 불러오기
+async function loadAdminVehicles() {
+    try {
+        const response = await fetch('/api/admin/vehicles');
+        const data = await response.json();
+        if (response.ok) {
+            renderAdminVehicles(data);
+        } else {
+            showAlert(data.error || '차량 로드에 실패했습니다.', 'danger');
+        }
+    } catch (error) {
+        showAlert('서버 오류가 발생했습니다.', 'danger');
+    }
+}
+
+function renderAdminVehicles(vehicles) {
+    const container = document.getElementById('vehicles-list');
+    if (!vehicles || vehicles.length === 0) {
+        container.innerHTML = '<p class="text-muted">등록된 차량이 없습니다.</p>';
+        return;
+    }
+    let html = `
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>운송사</th>
+                    <th>차량번호</th>
+                    <th>차량종류</th>
+                    <th>상태</th>
+                    <th>설명</th>
+                    <th>등록일</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    vehicles.forEach(vehicle => {
+        html += `
+            <tr>
+                <td>${vehicle.id}</td>
+                <td>${vehicle.carrier_name || '-'}</td>
+                <td>${vehicle.vehicle_number}</td>
+                <td>${vehicle.vehicle_type}</td>
+                <td><span class="badge ${getStatusBadgeClass(vehicle.status)}">${getStatusText(vehicle.status)}</span></td>
+                <td>${vehicle.description || '-'}</td>
+                <td>${formatDateTime(vehicle.created_at)}</td>
+            </tr>
+        `;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function onLoginSuccess() {
+    document.getElementById('main-section').style.display = '';
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('register-section').style.display = 'none';
+    setupRoleBasedUI();
+}
+
+function onLogoutOrLoginFail() {
+    document.getElementById('main-section').style.display = 'none';
+    document.getElementById('login-section').style.display = '';
+    document.getElementById('register-section').style.display = 'none';
+    document.getElementById('add-tolerance-btn').style.display = 'none';
 }

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>람차방 항구 공유 물류 시스템</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -38,11 +39,11 @@
                         <form id="login-form">
                             <div class="mb-3">
                                 <label for="username" class="form-label">사용자명</label>
-                                <input type="text" class="form-control" id="username" required>
+                                <input type="text" class="form-control" id="username" required autocomplete="username">
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">비밀번호</label>
-                                <input type="password" class="form-control" id="password" required>
+                                <input type="password" class="form-control" id="password" required autocomplete="current-password">
                             </div>
                             <button type="submit" class="btn btn-primary w-100">로그인</button>
                         </form>
@@ -67,13 +68,13 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="reg-username" class="form-label">사용자명</label>
-                                        <input type="text" class="form-control" id="reg-username" required>
+                                        <input type="text" class="form-control" id="reg-username" required autocomplete="username">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="reg-email" class="form-label">이메일</label>
-                                        <input type="email" class="form-control" id="reg-email" required>
+                                        <input type="email" class="form-control" id="reg-email" required autocomplete="email">
                                     </div>
                                 </div>
                             </div>
@@ -81,7 +82,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="reg-password" class="form-label">비밀번호</label>
-                                        <input type="password" class="form-control" id="reg-password" required>
+                                        <input type="password" class="form-control" id="reg-password" required autocomplete="new-password">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -95,7 +96,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="reg-phone" class="form-label">전화번호</label>
-                                        <input type="tel" class="form-control" id="reg-phone">
+                                        <input type="tel" class="form-control" id="reg-phone" autocomplete="tel">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -135,14 +136,14 @@
                             <!-- Driver specific fields -->
                             <div id="driver-fields" style="display: none;">
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="carrier-id" class="form-label">소속 운송사</label>
-                                            <select class="form-select" id="carrier-id">
-                                                <option value="">운송사를 선택하세요</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                                                <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="carrier-id-select" class="form-label">소속 운송사</label>
+                                    <select class="form-select" id="carrier-id-select">
+                                        <option value="">운송사를 선택하세요</option>
+                                    </select>
+                                </div>
+                            </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label for="license-number" class="form-label">면허번호</label>
@@ -223,9 +224,9 @@
                 <!-- Tolerances Tab -->
                 <div class="tab-pane fade show active" id="tolerances" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>여유 운송 관리</h5>
-                        <button id="add-tolerance-btn" class="btn btn-primary" style="display: none;">
-                            <i class="fas fa-plus"></i> 여유 운송 등록
+                        <h6>여유 운송 관리</h6>
+                        <button id="add-tolerance-btn" class="btn btn-primary btn-sm" style="display:none;">
+                            <i class="fas fa-plus"></i> 여유 운송 추가
                         </button>
                     </div>
                     <div id="tolerances-list" class="table-responsive">
@@ -237,12 +238,81 @@
                 <div class="tab-pane fade" id="requests" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>운송 요청 관리</h5>
-                        <button id="add-request-btn" class="btn btn-primary" style="display: none;">
-                            <i class="fas fa-plus"></i> 운송 요청 등록
+                        <button id="add-request-btn" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> 운송 요청 추가
                         </button>
                     </div>
                     <div id="requests-list" class="table-responsive">
                         <!-- Requests table will be loaded here -->
+                    </div>
+                </div>
+                <!-- Request Modal (수정/추가) -->
+                <div class="modal fade" id="requestModal2" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="requestModal2Label">운송 요청 추가</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="request-form2">
+                                    <input type="hidden" id="request-id">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-carrier-id-2" class="form-label">운송사 ID</label>
+                                            <input type="number" class="form-control" id="request-carrier-id-2" required placeholder="숫자만 입력">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-origin-2" class="form-label">출발지</label>
+                                            <input type="text" class="form-control" id="request-origin-2" required placeholder="출발지 입력">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-destination-2" class="form-label">도착지</label>
+                                            <input type="text" class="form-control" id="request-destination-2" required placeholder="도착지 입력">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-pickup-2" class="form-label">픽업시간</label>
+                                            <input type="datetime-local" class="form-control" id="request-pickup-2" required placeholder="YYYY-MM-DD HH:MM">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-delivery-2" class="form-label">배송시간</label>
+                                            <input type="datetime-local" class="form-control" id="request-delivery-2" placeholder="YYYY-MM-DD HH:MM">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-container-type-2" class="form-label">컨테이너 타입</label>
+                                            <select class="form-select" id="request-container-type-2" required>
+                                                <option value="" disabled selected hidden>선택하세요</option>
+                                                <option value="20ft">20ft</option>
+                                                <option value="40ft">40ft</option>
+                                                <option value="45ft">45ft</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-container-count-2" class="form-label">컨테이너 수량</label>
+                                            <input type="number" class="form-control" id="request-container-count-2" min="1" value="1" required placeholder="숫자 입력">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="request-budget-2" class="form-label">예산 (원)</label>
+                                            <input type="number" class="form-control" id="request-budget-2" min="0" step="1000" placeholder="숫자 입력">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="request-cargo-details-2" class="form-label">화물 상세 정보</label>
+                                        <textarea class="form-control" id="request-cargo-details-2" rows="3" placeholder="상세 정보 입력"></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                                <button type="button" class="btn btn-primary" id="save-request2">저장</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -250,8 +320,8 @@
                 <div class="tab-pane fade" id="matches" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>매칭 관리</h5>
-                        <button id="auto-match-btn" class="btn btn-success" style="display: none;">
-                            <i class="fas fa-magic"></i> 자동 매칭
+                        <button id="auto-match-admin-btn" class="btn btn-success">
+                            <i class="fas fa-magic"></i> 자동 매칭 실행
                         </button>
                     </div>
                     <div id="matches-list" class="table-responsive">
@@ -263,14 +333,9 @@
                 <div class="tab-pane fade" id="admin" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>시스템 관리</h5>
-                        <div>
-                            <button id="auto-match-admin-btn" class="btn btn-success me-2">
-                                <i class="fas fa-magic"></i> 자동 매칭 실행
-                            </button>
-                            <button id="refresh-stats-btn" class="btn btn-info">
-                                <i class="fas fa-sync"></i> 통계 새로고침
-                            </button>
-                        </div>
+                        <button id="refresh-stats-btn" class="btn btn-info">
+                            <i class="fas fa-sync"></i> 통계 새로고침
+                        </button>
                     </div>
                     
                     <!-- Admin Sub-tabs -->
@@ -293,6 +358,11 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="drivers-tab" data-bs-toggle="pill" data-bs-target="#drivers" type="button" role="tab">
                                 <i class="fas fa-id-card"></i> 기사 관리
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="vehicles-tab" data-bs-toggle="pill" data-bs-target="#vehicles" type="button" role="tab">
+                                <i class="fas fa-car"></i> 차량 관리
                             </button>
                         </li>
                     </ul>
@@ -344,6 +414,19 @@
                                 <!-- Drivers table will be loaded here -->
                             </div>
                         </div>
+                        
+                        <!-- Vehicles Tab -->
+                        <div class="tab-pane fade" id="vehicles" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6>차량 관리</h6>
+                                <button id="add-vehicle-btn" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> 차량 추가
+                                </button>
+                            </div>
+                            <div id="vehicles-list" class="table-responsive">
+                                <!-- Vehicles table will be loaded here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -363,36 +446,36 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="tolerance-origin" class="form-label">출발지</label>
-                                    <input type="text" class="form-control" id="tolerance-origin" required>
+                                    <label for="tolerance-origin-1" class="form-label">출발지</label>
+                                    <input type="text" class="form-control" id="tolerance-origin-1" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="tolerance-destination" class="form-label">도착지</label>
-                                    <input type="text" class="form-control" id="tolerance-destination" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="tolerance-departure" class="form-label">출발시간</label>
-                                    <input type="datetime-local" class="form-control" id="tolerance-departure" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="tolerance-arrival" class="form-label">도착시간</label>
-                                    <input type="datetime-local" class="form-control" id="tolerance-arrival">
+                                    <label for="tolerance-destination-1" class="form-label">도착지</label>
+                                    <input type="text" class="form-control" id="tolerance-destination-1" required>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="tolerance-container-type" class="form-label">컨테이너 타입</label>
-                                    <select class="form-select" id="tolerance-container-type" required>
+                                    <label for="tolerance-departure-1" class="form-label">출발시간</label>
+                                    <input type="datetime-local" class="form-control" id="tolerance-departure-1" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tolerance-arrival-1" class="form-label">도착시간</label>
+                                    <input type="datetime-local" class="form-control" id="tolerance-arrival-1">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="tolerance-container-type-1" class="form-label">컨테이너 타입</label>
+                                    <select class="form-select" id="tolerance-container-type-1" required>
                                         <option value="">선택하세요</option>
                                         <option value="20ft">20ft</option>
                                         <option value="40ft">40ft</option>
@@ -402,22 +485,22 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="tolerance-container-count" class="form-label">컨테이너 수량</label>
-                                    <input type="number" class="form-control" id="tolerance-container-count" min="1" value="1">
+                                    <label for="tolerance-container-count-1" class="form-label">컨테이너 수량</label>
+                                    <input type="number" class="form-control" id="tolerance-container-count-1" min="1" value="1">
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="tolerance-price" class="form-label">가격 (원)</label>
-                                    <input type="number" class="form-control" id="tolerance-price" min="0" step="1000">
+                                    <label for="tolerance-price-1" class="form-label">가격 (원)</label>
+                                    <input type="number" class="form-control" id="tolerance-price-1" min="0" step="1000">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3 form-check mt-4">
-                                    <input type="checkbox" class="form-check-input" id="tolerance-empty-run">
-                                    <label class="form-check-label" for="tolerance-empty-run">공차 운행</label>
+                                    <input type="checkbox" class="form-check-input" id="tolerance-empty-run-1">
+                                    <label class="form-check-label" for="tolerance-empty-run-1">공차 운행</label>
                                 </div>
                             </div>
                         </div>
@@ -510,7 +593,1074 @@
         </div>
     </div>
 
+    <!-- User Modal -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalLabel">사용자 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="user-form">
+                        <input type="hidden" id="user-id">
+                        <div class="mb-3">
+                            <label for="user-username" class="form-label">사용자명</label>
+                            <input type="text" class="form-control" id="user-username" required placeholder="영문/숫자 4~20자">
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-email" class="form-label">이메일</label>
+                            <input type="email" class="form-control" id="user-email" required placeholder="example@domain.com" autocomplete="email">
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-password" class="form-label">비밀번호</label>
+                            <input type="password" class="form-control" id="user-password" autocomplete="new-password" placeholder="8자 이상, 영문/숫자/특수문자 조합">
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-role" class="form-label">역할</label>
+                            <select class="form-select" id="user-role" required>
+                                <option value="" disabled selected hidden>선택하세요</option>
+                                <option value="admin">관리자</option>
+                                <option value="carrier">운송사 담당자</option>
+                                <option value="driver">기사</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-fullname" class="form-label">이름</label>
+                            <input type="text" class="form-control" id="user-fullname" required placeholder="실명 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-phone" class="form-label">전화번호</label>
+                            <input type="text" class="form-control" id="user-phone" placeholder="010-1234-5678" autocomplete="tel">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="user-active" checked>
+                            <label class="form-check-label" for="user-active">활성화</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="save-user">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carrier Modal -->
+    <div class="modal fade" id="carrierModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="carrierModalLabel">운송사 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="carrier-form">
+                        <input type="hidden" id="carrier-id">
+                        <div class="mb-3">
+                            <label for="carrier-user-id" class="form-label">담당자(사용자) ID</label>
+                            <input type="number" class="form-control" id="carrier-user-id" required placeholder="숫자만 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="carrier-company-name" class="form-label">회사명</label>
+                            <input type="text" class="form-control" id="carrier-company-name" required placeholder="상호명 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="carrier-business-license" class="form-label">사업자번호</label>
+                            <input type="text" class="form-control" id="carrier-business-license" placeholder="10자리 숫자">
+                        </div>
+                        <div class="mb-3">
+                            <label for="carrier-contact-person" class="form-label">담당자명</label>
+                            <input type="text" class="form-control" id="carrier-contact-person" required placeholder="실명 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="carrier-address" class="form-label">주소</label>
+                            <input type="text" class="form-control" id="carrier-address" placeholder="도로명 주소">
+                        </div>
+                        <div class="mb-3">
+                            <label for="carrier-phone" class="form-label">전화번호</label>
+                            <input type="text" class="form-control" id="carrier-phone" placeholder="010-1234-5678" autocomplete="tel">
+                        </div>
+                        <div class="mb-3">
+                            <label for="carrier-email" class="form-label">이메일</label>
+                            <input type="email" class="form-control" id="carrier-email" placeholder="example@domain.com" autocomplete="email">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="carrier-active" checked>
+                            <label class="form-check-label" for="carrier-active">활성화</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="save-carrier">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Modal -->
+    <div class="modal fade" id="driverModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="driverModalLabel">기사 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="driver-form">
+                        <input type="hidden" id="driver-id">
+                        <div class="mb-3">
+                            <label for="driver-user-id" class="form-label">사용자 ID</label>
+                            <input type="number" class="form-control" id="driver-user-id" required placeholder="숫자만 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="driver-carrier-id" class="form-label">운송사 ID</label>
+                            <input type="number" class="form-control" id="driver-carrier-id" required placeholder="숫자만 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="driver-license-number" class="form-label">면허번호</label>
+                            <input type="text" class="form-control" id="driver-license-number" required placeholder="면허번호 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="driver-vehicle-type" class="form-label">차종</label>
+                            <input type="text" class="form-control" id="driver-vehicle-type" placeholder="예: 트레일러">
+                        </div>
+                        <div class="mb-3">
+                            <label for="driver-vehicle-number" class="form-label">차량번호</label>
+                            <input type="text" class="form-control" id="driver-vehicle-number" placeholder="예: 12가3456">
+                        </div>
+                        <div class="mb-3">
+                            <label for="driver-status" class="form-label">상태</label>
+                            <select class="form-select" id="driver-status">
+                                <option value="available">대기</option>
+                                <option value="busy">운행중</option>
+                                <option value="offline">오프라인</option>
+                            </select>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="driver-active" checked>
+                            <label class="form-check-label" for="driver-active">활성화</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="save-driver">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Modal -->
+    <div class="modal fade" id="vehicleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="vehicleModalLabel">차량 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="vehicle-form">
+                        <input type="hidden" id="vehicle-id">
+                        <div class="mb-3">
+                            <label for="vehicle-carrier-id" class="form-label">운송사 ID</label>
+                            <input type="number" class="form-control" id="vehicle-carrier-id" required placeholder="숫자만 입력">
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicle-number-1" class="form-label">차량번호</label>
+                            <input type="text" class="form-control" id="vehicle-number-1" required placeholder="예: 12가3456">
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicle-type-1" class="form-label">차종</label>
+                            <input type="text" class="form-control" id="vehicle-type-1" required placeholder="예: 트레일러">
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicle-status" class="form-label">상태</label>
+                            <select class="form-select" id="vehicle-status">
+                                <option value="available">대기</option>
+                                <option value="in_use">운행중</option>
+                                <option value="maintenance">정비중</option>
+                                <option value="inactive">비활성</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vehicle-description" class="form-label">비고</label>
+                            <input type="text" class="form-control" id="vehicle-description" placeholder="특이사항 입력">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="vehicle-active" checked>
+                            <label class="form-check-label" for="vehicle-active">활성화</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="save-vehicle">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tolerance Modal (여유 운송 추가/수정) -->
+    <div class="modal fade" id="toleranceModal2" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="toleranceModal2Label">여유 운송 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="tolerance-form2">
+                        <input type="hidden" id="tolerance-id">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-carrier-id-2" class="form-label">운송사 ID</label>
+                                <input type="number" class="form-control" id="tolerance-carrier-id-2" required placeholder="숫자만 입력">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-origin-2" class="form-label">출발지</label>
+                                <input type="text" class="form-control" id="tolerance-origin-2" required placeholder="출발지 입력">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-destination-2" class="form-label">도착지</label>
+                                <input type="text" class="form-control" id="tolerance-destination-2" required placeholder="도착지 입력">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-departure-2" class="form-label">출발시간</label>
+                                <input type="datetime-local" class="form-control" id="tolerance-departure-2" required placeholder="YYYY-MM-DD HH:MM">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-arrival-2" class="form-label">도착시간</label>
+                                <input type="datetime-local" class="form-control" id="tolerance-arrival-2" placeholder="YYYY-MM-DD HH:MM">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-container-type-2" class="form-label">컨테이너 타입</label>
+                                <select class="form-select" id="tolerance-container-type-2" required>
+                                    <option value="" disabled selected hidden>선택하세요</option>
+                                    <option value="20ft">20ft</option>
+                                    <option value="40ft">40ft</option>
+                                    <option value="45ft">45ft</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-container-count-2" class="form-label">컨테이너 수량</label>
+                                <input type="number" class="form-control" id="tolerance-container-count-2" min="1" value="1" required placeholder="숫자 입력">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-price-2" class="form-label">가격 (원)</label>
+                                <input type="number" class="form-control" id="tolerance-price-2" min="0" step="1000" placeholder="숫자 입력">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" id="tolerance-empty-run-2">
+                                    <label class="form-check-label" for="tolerance-empty-run-2">공차 운행</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="tolerance-special-2" class="form-label">특이사항</label>
+                                <input type="text" class="form-control" id="tolerance-special-2" placeholder="특이사항 입력">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="save-tolerance2">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/app.js"></script>
+    <script>
+    // 1. currentUser 기본값 보장
+    if (!window.currentUser) {
+        window.currentUser = {role: 'admin', carrier_id: null};
+    }
+    // let currentUser = window.currentUser; // 중복 선언 제거
+    // 이후 currentUser 대신 window.currentUser 사용
+
+    // 2. main-section, tolerances 탭 항상 보이도록 보장
+    window.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('main-section').style.display = 'none';
+        var btn = document.getElementById('add-tolerance-btn');
+        if (btn) btn.style.display = 'none';
+        document.getElementById('login-section').style.display = '';
+    });
+
+    // 3. JS 오류 발생 시 콘솔에 경고 출력
+    window.onerror = function(message, source, lineno, colno, error) {
+        console.warn('JS 오류:', message, source, lineno, colno, error);
+    };
+
+    // 사용자 목록 렌더링 함수
+    async function loadUsers() {
+        const res = await fetch('/api/admin/users');
+        const users = await res.json();
+        let html = `<table class="table table-bordered table-sm align-middle">
+            <thead><tr><th>ID</th><th>사용자명</th><th>이메일</th><th>이름</th><th>역할</th><th>전화번호</th><th>상태</th><th>가입일</th><th>작업</th></tr></thead><tbody>`;
+        for (const u of users) {
+            html += `<tr>
+                <td>${u.id}</td>
+                <td>${u.username}</td>
+                <td>${u.email}</td>
+                <td>${u.full_name}</td>
+                <td><span class="badge bg-${u.role==='admin'?'danger':u.role==='carrier'?'primary':'info'}">${u.role==='admin'?'관리자':u.role==='carrier'?'운송사':'기사'}</span></td>
+                <td>${u.phone||''}</td>
+                <td><span class="badge bg-${u.is_active?'success':'secondary'}">${u.is_active?'활성':'비활성'}</span></td>
+                <td>${u.created_at?u.created_at.split('T')[0]:''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1 edit-user-btn" data-id="${u.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-user-btn" data-id="${u.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('users-list').innerHTML = html;
+    }
+    // 사용자 추가 버튼 클릭
+    document.getElementById('add-user-btn').onclick = function() {
+        document.getElementById('userModalLabel').innerText = '사용자 추가';
+        document.getElementById('user-form').reset();
+        document.getElementById('user-id').value = '';
+        document.getElementById('user-active').checked = true;
+        document.getElementById('user-password').required = true;
+        new bootstrap.Modal(document.getElementById('userModal')).show();
+    };
+    // 사용자 저장(추가/수정)
+    document.getElementById('save-user').onclick = async function() {
+        const id = document.getElementById('user-id').value;
+        const data = {
+            username: document.getElementById('user-username').value,
+            email: document.getElementById('user-email').value,
+            password: document.getElementById('user-password').value,
+            role: document.getElementById('user-role').value,
+            full_name: document.getElementById('user-fullname').value,
+            phone: document.getElementById('user-phone').value,
+            is_active: document.getElementById('user-active').checked
+        };
+        if (id) {
+            data.id = id;
+            if (!data.password) delete data.password;
+            const res = await fetch('/api/admin/users', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                loadUsers();
+            } else {
+                alert('수정 실패');
+            }
+        } else {
+            if (!data.password) {
+                alert('비밀번호를 입력하세요');
+                return;
+            }
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                loadUsers();
+            } else {
+                alert('생성 실패');
+            }
+        }
+    };
+    // 사용자 수정 버튼 이벤트
+    document.getElementById('users-list').onclick = async function(e) {
+        if (e.target.closest('.edit-user-btn')) {
+            const id = e.target.closest('.edit-user-btn').dataset.id;
+            const res = await fetch('/api/admin/users');
+            const users = await res.json();
+            const u = users.find(x=>x.id==id);
+            if (!u) return;
+            document.getElementById('userModalLabel').innerText = '사용자 수정';
+            document.getElementById('user-id').value = u.id;
+            document.getElementById('user-username').value = u.username;
+            document.getElementById('user-email').value = u.email;
+            document.getElementById('user-password').value = '';
+            document.getElementById('user-role').value = u.role;
+            document.getElementById('user-fullname').value = u.full_name;
+            document.getElementById('user-phone').value = u.phone||'';
+            document.getElementById('user-active').checked = u.is_active;
+            document.getElementById('user-password').required = false;
+            new bootstrap.Modal(document.getElementById('userModal')).show();
+        }
+        // 사용자 삭제 버튼 이벤트
+        if (e.target.closest('.delete-user-btn')) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const id = e.target.closest('.delete-user-btn').dataset.id;
+            const res = await fetch(`/api/admin/users?id=${id}`, {method:'DELETE'});
+            if (res.ok) loadUsers();
+            else alert('삭제 실패');
+        }
+    };
+    // 탭 활성화 시 사용자 목록 로드
+    document.getElementById('users-tab').addEventListener('shown.bs.tab', loadUsers);
+    // 입력값 있을 때 placeholder 제거, 없으면 복구
+    const userPlaceholders = {
+        'user-username': '영문/숫자 4~20자',
+        'user-email': 'example@domain.com',
+        'user-password': '8자 이상, 영문/숫자/특수문자 조합',
+        'user-fullname': '실명 입력',
+        'user-phone': '010-1234-5678'
+    };
+    for (const id in userPlaceholders) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.addEventListener('input', function() {
+            if (this.value) this.placeholder = '';
+            else this.placeholder = userPlaceholders[id];
+        });
+    }
+
+    // 운송사 목록 렌더링 함수
+    async function loadCarriers() {
+        const res = await fetch('/api/admin/carriers');
+        const carriers = await res.json();
+        let html = `<table class="table table-bordered table-sm align-middle">
+            <thead><tr><th>ID</th><th>사용자ID</th><th>회사명</th><th>사업자번호</th><th>담당자</th><th>주소</th><th>전화번호</th><th>이메일</th><th>상태</th><th>가입일</th><th>작업</th></tr></thead><tbody>`;
+        for (const c of carriers) {
+            html += `<tr>
+                <td>${c.id}</td>
+                <td>${c.user_id}</td>
+                <td>${c.company_name}</td>
+                <td>${c.business_license||''}</td>
+                <td>${c.contact_person}</td>
+                <td>${c.address||''}</td>
+                <td>${c.phone||''}</td>
+                <td>${c.email||''}</td>
+                <td><span class="badge bg-${c.is_active?'success':'secondary'}">${c.is_active?'활성':'비활성'}</span></td>
+                <td>${c.created_at?c.created_at.split('T')[0]:''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1 edit-carrier-btn" data-id="${c.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-carrier-btn" data-id="${c.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('carriers-list').innerHTML = html;
+    }
+    // 운송사 추가 버튼 클릭
+    document.getElementById('add-carrier-btn').onclick = function() {
+        document.getElementById('carrierModalLabel').innerText = '운송사 추가';
+        document.getElementById('carrier-form').reset();
+        document.getElementById('carrier-id').value = '';
+        document.getElementById('carrier-active').checked = true;
+        new bootstrap.Modal(document.getElementById('carrierModal')).show();
+    };
+    // 운송사 저장(추가/수정)
+    document.getElementById('save-carrier').onclick = async function() {
+        const id = document.getElementById('carrier-id').value;
+        const data = {
+            user_id: document.getElementById('carrier-user-id').value,
+            company_name: document.getElementById('carrier-company-name').value,
+            business_license: document.getElementById('carrier-business-license').value,
+            contact_person: document.getElementById('carrier-contact-person').value,
+            address: document.getElementById('carrier-address').value,
+            phone: document.getElementById('carrier-phone').value,
+            email: document.getElementById('carrier-email').value,
+            is_active: document.getElementById('carrier-active').checked
+        };
+        if (id) {
+            data.id = id;
+            const res = await fetch('/api/admin/carriers', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('carrierModal')).hide();
+                loadCarriers();
+            } else {
+                alert('수정 실패');
+            }
+        } else {
+            const res = await fetch('/api/admin/carriers', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('carrierModal')).hide();
+                loadCarriers();
+            } else {
+                alert('생성 실패');
+            }
+        }
+    };
+    // 운송사 수정/삭제 버튼 이벤트
+    document.getElementById('carriers-list').onclick = async function(e) {
+        if (e.target.closest('.edit-carrier-btn')) {
+            const id = e.target.closest('.edit-carrier-btn').dataset.id;
+            const res = await fetch('/api/admin/carriers');
+            const carriers = await res.json();
+            const c = carriers.find(x=>x.id==id);
+            if (!c) return;
+            document.getElementById('carrierModalLabel').innerText = '운송사 수정';
+            document.getElementById('carrier-id').value = c.id;
+            document.getElementById('carrier-user-id').value = c.user_id;
+            document.getElementById('carrier-company-name').value = c.company_name;
+            document.getElementById('carrier-business-license').value = c.business_license||'';
+            document.getElementById('carrier-contact-person').value = c.contact_person;
+            document.getElementById('carrier-address').value = c.address||'';
+            document.getElementById('carrier-phone').value = c.phone||'';
+            document.getElementById('carrier-email').value = c.email||'';
+            document.getElementById('carrier-active').checked = c.is_active;
+            new bootstrap.Modal(document.getElementById('carrierModal')).show();
+        }
+        if (e.target.closest('.delete-carrier-btn')) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const id = e.target.closest('.delete-carrier-btn').dataset.id;
+            const res = await fetch(`/api/admin/carriers?id=${id}`, {method:'DELETE'});
+            if (res.ok) loadCarriers();
+            else alert('삭제 실패');
+        }
+    };
+    // 탭 활성화 시 운송사 목록 로드
+    document.getElementById('carriers-tab').addEventListener('shown.bs.tab', loadCarriers);
+
+    // 기사 목록 렌더링 함수
+    async function loadDrivers() {
+        const res = await fetch('/api/admin/drivers');
+        const drivers = await res.json();
+        let html = `<table class="table table-bordered table-sm align-middle">
+            <thead><tr><th>ID</th><th>사용자ID</th><th>운송사ID</th><th>면허번호</th><th>차종</th><th>차량번호</th><th>상태</th><th>활성</th><th>가입일</th><th>작업</th></tr></thead><tbody>`;
+        for (const d of drivers) {
+            html += `<tr>
+                <td>${d.id}</td>
+                <td>${d.user_id}</td>
+                <td>${d.carrier_id}</td>
+                <td>${d.license_number}</td>
+                <td>${d.vehicle_type||''}</td>
+                <td>${d.vehicle_number||''}</td>
+                <td><span class="badge bg-${d.status==='available'?'success':d.status==='busy'?'warning':'secondary'}">${d.status==='available'?'대기':d.status==='busy'?'운행중':'오프라인'}</span></td>
+                <td><span class="badge bg-${d.is_active?'success':'secondary'}">${d.is_active?'활성':'비활성'}</span></td>
+                <td>${d.created_at?d.created_at.split('T')[0]:''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1 edit-driver-btn" data-id="${d.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-driver-btn" data-id="${d.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('drivers-list').innerHTML = html;
+    }
+    // 기사 추가 버튼 클릭
+    document.getElementById('add-driver-btn').onclick = function() {
+        document.getElementById('driverModalLabel').innerText = '기사 추가';
+        document.getElementById('driver-form').reset();
+        document.getElementById('driver-id').value = '';
+        document.getElementById('driver-active').checked = true;
+        new bootstrap.Modal(document.getElementById('driverModal')).show();
+    };
+    // 기사 저장(추가/수정)
+    document.getElementById('save-driver').onclick = async function() {
+        const id = document.getElementById('driver-id').value;
+        const data = {
+            user_id: document.getElementById('driver-user-id').value,
+            carrier_id: document.getElementById('driver-carrier-id').value,
+            license_number: document.getElementById('driver-license-number').value,
+            vehicle_type: document.getElementById('driver-vehicle-type').value,
+            vehicle_number: document.getElementById('driver-vehicle-number').value,
+            status: document.getElementById('driver-status').value,
+            is_active: document.getElementById('driver-active').checked
+        };
+        if (id) {
+            data.id = id;
+            const res = await fetch('/api/admin/drivers', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('driverModal')).hide();
+                loadDrivers();
+            } else {
+                alert('수정 실패');
+            }
+        } else {
+            const res = await fetch('/api/admin/drivers', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('driverModal')).hide();
+                loadDrivers();
+            } else {
+                alert('생성 실패');
+            }
+        }
+    };
+    // 기사 수정/삭제 버튼 이벤트
+    document.getElementById('drivers-list').onclick = async function(e) {
+        if (e.target.closest('.edit-driver-btn')) {
+            const id = e.target.closest('.edit-driver-btn').dataset.id;
+            const res = await fetch('/api/admin/drivers');
+            const drivers = await res.json();
+            const d = drivers.find(x=>x.id==id);
+            if (!d) return;
+            document.getElementById('driverModalLabel').innerText = '기사 수정';
+            document.getElementById('driver-id').value = d.id;
+            document.getElementById('driver-user-id').value = d.user_id;
+            document.getElementById('driver-carrier-id').value = d.carrier_id;
+            document.getElementById('driver-license-number').value = d.license_number;
+            document.getElementById('driver-vehicle-type').value = d.vehicle_type||'';
+            document.getElementById('driver-vehicle-number').value = d.vehicle_number||'';
+            document.getElementById('driver-status').value = d.status||'available';
+            document.getElementById('driver-active').checked = d.is_active;
+            new bootstrap.Modal(document.getElementById('driverModal')).show();
+        }
+        if (e.target.closest('.delete-driver-btn')) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const id = e.target.closest('.delete-driver-btn').dataset.id;
+            const res = await fetch(`/api/admin/drivers?id=${id}`, {method:'DELETE'});
+            if (res.ok) loadDrivers();
+            else alert('삭제 실패');
+        }
+    };
+    // 탭 활성화 시 기사 목록 로드
+    document.getElementById('drivers-tab').addEventListener('shown.bs.tab', loadDrivers);
+
+    // 차량 목록 렌더링 함수
+    async function loadVehicles() {
+        const res = await fetch('/api/admin/vehicles');
+        const vehicles = await res.json();
+        let html = `<table class="table table-bordered table-sm align-middle">
+            <thead><tr><th>ID</th><th>운송사ID</th><th>차량번호</th><th>차종</th><th>상태</th><th>비고</th><th>활성</th><th>등록일</th><th>작업</th></tr></thead><tbody>`;
+        for (const v of vehicles) {
+            html += `<tr>
+                <td>${v.id}</td>
+                <td>${v.carrier_id}</td>
+                <td>${v.vehicle_number}</td>
+                <td>${v.vehicle_type}</td>
+                <td><span class="badge bg-${v.status==='available'?'success':v.status==='in_use'?'warning':v.status==='maintenance'?'info':'secondary'}">${v.status==='available'?'대기':v.status==='in_use'?'운행중':v.status==='maintenance'?'정비중':'비활성'}</span></td>
+                <td>${v.description||''}</td>
+                <td><span class="badge bg-${v.is_active?'success':'secondary'}">${v.is_active?'활성':'비활성'}</span></td>
+                <td>${v.created_at?v.created_at.split('T')[0]:''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1 edit-vehicle-btn" data-id="${v.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-vehicle-btn" data-id="${v.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('vehicles-list').innerHTML = html;
+    }
+    // 차량 추가 버튼 클릭
+    document.getElementById('add-vehicle-btn').onclick = function() {
+        document.getElementById('vehicleModalLabel').innerText = '차량 추가';
+        document.getElementById('vehicle-form').reset();
+        document.getElementById('vehicle-id').value = '';
+        document.getElementById('vehicle-active').checked = true;
+        new bootstrap.Modal(document.getElementById('vehicleModal')).show();
+    };
+    // 차량 저장(추가/수정)
+    document.getElementById('save-vehicle').onclick = async function() {
+        const id = document.getElementById('vehicle-id').value;
+        const data = {
+            carrier_id: document.getElementById('vehicle-carrier-id').value,
+            vehicle_number: document.getElementById('vehicle-number-1').value,
+            vehicle_type: document.getElementById('vehicle-type-1').value,
+            status: document.getElementById('vehicle-status').value,
+            description: document.getElementById('vehicle-description').value,
+            is_active: document.getElementById('vehicle-active').checked
+        };
+        if (id) {
+            data.id = id;
+            const res = await fetch('/api/admin/vehicles', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+                loadVehicles();
+            } else {
+                alert('수정 실패');
+            }
+        } else {
+            const res = await fetch('/api/admin/vehicles', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+                loadVehicles();
+            } else {
+                alert('생성 실패');
+            }
+        }
+    };
+    // 차량 수정/삭제 버튼 이벤트
+    document.getElementById('vehicles-list').onclick = async function(e) {
+        if (e.target.closest('.edit-vehicle-btn')) {
+            const id = e.target.closest('.edit-vehicle-btn').dataset.id;
+            const res = await fetch('/api/admin/vehicles');
+            const vehicles = await res.json();
+            const v = vehicles.find(x=>x.id==id);
+            if (!v) return;
+            document.getElementById('vehicleModalLabel').innerText = '차량 수정';
+            document.getElementById('vehicle-id').value = v.id;
+            document.getElementById('vehicle-carrier-id').value = v.carrier_id;
+            document.getElementById('vehicle-number-1').value = v.vehicle_number;
+            document.getElementById('vehicle-type-1').value = v.vehicle_type;
+            document.getElementById('vehicle-status').value = v.status||'available';
+            document.getElementById('vehicle-description').value = v.description||'';
+            document.getElementById('vehicle-active').checked = v.is_active;
+            new bootstrap.Modal(document.getElementById('vehicleModal')).show();
+        }
+        if (e.target.closest('.delete-vehicle-btn')) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const id = e.target.closest('.delete-vehicle-btn').dataset.id;
+            const res = await fetch(`/api/admin/vehicles?id=${id}`, {method:'DELETE'});
+            if (res.ok) loadVehicles();
+            else alert('삭제 실패');
+        }
+    };
+    // 탭 활성화 시 차량 목록 로드
+    document.getElementById('vehicles-tab').addEventListener('shown.bs.tab', loadVehicles);
+
+    // 입력값 있을 때 placeholder 제거, 없으면 복구
+    const vehiclePlaceholders = {
+        'vehicle-carrier-id': '숫자만 입력',
+        'vehicle-number-1': '예: 12가3456',
+        'vehicle-type-1': '예: 트레일러',
+        'vehicle-description': '특이사항 입력'
+    };
+    for (const id in vehiclePlaceholders) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.addEventListener('input', function() {
+            if (this.value) this.placeholder = '';
+            else this.placeholder = vehiclePlaceholders[id];
+        });
+    }
+
+    // 여유 운송 목록 렌더링 함수 (사용자 관리와 동일한 테이블/버튼 UX)
+    async function loadTolerances() {
+        const res = await fetch('/api/tolerances');
+        let tolerances = await res.json();
+        if(window.currentUser && window.currentUser.role === 'carrier' && window.currentUser.carrier_id) {
+            tolerances = tolerances.filter(t => t.carrier_id == window.currentUser.carrier_id);
+        }
+        let html = `<table class="table table-bordered table-sm align-middle">
+            <thead><tr><th>ID</th><th>운송사ID</th><th>출발지</th><th>도착지</th><th>출발시간</th><th>도착시간</th><th>컨테이너</th><th>수량</th><th>가격</th><th>공차</th><th>특이사항</th><th>작업</th></tr></thead><tbody>`;
+        for (const t of tolerances) {
+            html += `<tr>
+                <td>${t.id}</td>
+                <td>${t.carrier_id}</td>
+                <td>${t.origin}</td>
+                <td>${t.destination}</td>
+                <td>${t.departure_time? t.departure_time.replace('T',' ').slice(0,16):''}</td>
+                <td>${t.arrival_time? t.arrival_time.replace('T',' ').slice(0,16):''}</td>
+                <td>${t.container_type}</td>
+                <td>${t.container_count}</td>
+                <td>${t.price||''}</td>
+                <td>${t.is_empty_run?'예':'아니오'}</td>
+                <td>${t.special_requirements||''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1 edit-tolerance-btn" data-id="${t.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-tolerance-btn" data-id="${t.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('tolerances-list').innerHTML = html;
+    }
+    // 여유 운송 추가 버튼 클릭
+    if(document.getElementById('add-tolerance-btn')) {
+        document.getElementById('add-tolerance-btn').onclick = function() {
+            document.getElementById('toleranceModal2Label').innerText = '여유 운송 추가';
+            document.getElementById('tolerance-form2').reset();
+            document.getElementById('tolerance-id').value = '';
+            document.getElementById('tolerance-empty-run-2').checked = false;
+            new bootstrap.Modal(document.getElementById('toleranceModal2')).show();
+        };
+    }
+    // 여유 운송 저장(추가/수정)
+    document.getElementById('save-tolerance2').onclick = async function() {
+        const id = document.getElementById('tolerance-id').value;
+        const data = {
+            carrier_id: document.getElementById('tolerance-carrier-id-2').value,
+            origin: document.getElementById('tolerance-origin-2').value,
+            destination: document.getElementById('tolerance-destination-2').value,
+            departure_time: document.getElementById('tolerance-departure-2').value,
+            arrival_time: document.getElementById('tolerance-arrival-2').value,
+            container_type: document.getElementById('tolerance-container-type-2').value,
+            container_count: document.getElementById('tolerance-container-count-2').value,
+            price: document.getElementById('tolerance-price-2').value,
+            is_empty_run: document.getElementById('tolerance-empty-run-2').checked,
+            special_requirements: document.getElementById('tolerance-special-2').value
+        };
+        if (id) {
+            data.id = id;
+            const res = await fetch('/api/tolerances', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('toleranceModal2')).hide();
+                loadTolerances();
+            } else {
+                alert('수정 실패');
+            }
+        } else {
+            const res = await fetch('/api/tolerances', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('toleranceModal2')).hide();
+                loadTolerances();
+            } else {
+                alert('생성 실패');
+            }
+        }
+    };
+    // 여유 운송 수정/삭제 버튼 이벤트
+    document.getElementById('tolerances-list').onclick = async function(e) {
+        if (e.target.closest('.edit-tolerance-btn')) {
+            const id = e.target.closest('.edit-tolerance-btn').dataset.id;
+            const res = await fetch('/api/tolerances');
+            const tolerances = await res.json();
+            const t = tolerances.find(x=>x.id==id);
+            if (!t) return;
+            document.getElementById('toleranceModal2Label').innerText = '여유 운송 수정';
+            document.getElementById('tolerance-id').value = t.id;
+            document.getElementById('tolerance-carrier-id-2').value = t.carrier_id;
+            document.getElementById('tolerance-origin-2').value = t.origin;
+            document.getElementById('tolerance-destination-2').value = t.destination;
+            document.getElementById('tolerance-departure-2').value = t.departure_time? t.departure_time.slice(0,16):'';
+            document.getElementById('tolerance-arrival-2').value = t.arrival_time? t.arrival_time.slice(0,16):'';
+            document.getElementById('tolerance-container-type-2').value = t.container_type;
+            document.getElementById('tolerance-container-count-2').value = t.container_count;
+            document.getElementById('tolerance-price-2').value = t.price||'';
+            document.getElementById('tolerance-empty-run-2').checked = t.is_empty_run;
+            document.getElementById('tolerance-special-2').value = t.special_requirements||'';
+            new bootstrap.Modal(document.getElementById('toleranceModal2')).show();
+        }
+        if (e.target.closest('.delete-tolerance-btn')) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const id = e.target.closest('.delete-tolerance-btn').dataset.id;
+            const res = await fetch(`/api/tolerances?id=${id}`, {method:'DELETE'});
+            if (res.ok) loadTolerances();
+            else alert('삭제 실패');
+        }
+    };
+    // 탭 활성화 시 여유 운송 목록 로드
+    document.getElementById('tolerances-tab').addEventListener('shown.bs.tab', loadTolerances);
+
+    // 입력값 있을 때 placeholder 제거, 없으면 복구 (여유 운송)
+    const tolerancePlaceholders = {
+        'tolerance-carrier-id-2': '숫자만 입력',
+        'tolerance-origin-2': '출발지 입력',
+        'tolerance-destination-2': '도착지 입력',
+        'tolerance-departure-2': 'YYYY-MM-DD HH:MM',
+        'tolerance-arrival-2': 'YYYY-MM-DD HH:MM',
+        'tolerance-container-count-2': '숫자 입력',
+        'tolerance-price-2': '숫자 입력',
+        'tolerance-special-2': '특이사항 입력'
+    };
+    for (const id in tolerancePlaceholders) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.addEventListener('input', function() {
+            if (this.value) this.placeholder = '';
+            else this.placeholder = tolerancePlaceholders[id];
+        });
+    }
+
+    // 로그인 성공 시 onLoginSuccess()를 반드시 호출하도록 로그인 처리 코드에 추가
+    function onLoginSuccess() {
+        document.getElementById('main-section').style.display = '';
+        var btn = document.getElementById('add-tolerance-btn');
+        if (btn) btn.style.display = '';
+        document.getElementById('login-section').style.display = 'none';
+        // 관리자 탭 표시 (권한별)
+        if (window.currentUser && window.currentUser.role === 'admin') {
+            var adminTab = document.getElementById('admin-tab-item');
+            if (adminTab) adminTab.style.display = 'block';
+        }
+    }
+
+    function onLogoutOrLoginFail() {
+        document.getElementById('main-section').style.display = 'none';
+        var btn = document.getElementById('add-tolerance-btn');
+        if (btn) btn.style.display = 'none';
+        document.getElementById('login-section').style.display = '';
+    }
+
+    document.getElementById('logout-btn').onclick = function() {
+        // ... 로그아웃 요청 코드 ...
+        onLogoutOrLoginFail();
+    };
+
+    // 로그인 폼 제출 이벤트
+    document.getElementById('login-form').onsubmit = async function(e) {
+        e.preventDefault();
+        // ... 로그인 요청 코드 ...
+        const res = await fetch('/login', { /* ... */ });
+        if (res.ok) {
+            // 로그인 성공 시
+            onLoginSuccess();
+        } else {
+            // 로그인 실패 시
+            onLogoutOrLoginFail();
+        }
+    };
+
+    // 운송 요청 CRUD JS (여유 운송과 동일 패턴)
+    async function loadRequests2() {
+        const res = await fetch('/api/delivery-requests');
+        let requests = await res.json();
+        if(window.currentUser && window.currentUser.role === 'carrier' && window.currentUser.carrier_id) {
+            requests = requests.filter(r => r.carrier_id == window.currentUser.carrier_id);
+        }
+        let html = `<table class="table table-bordered table-sm align-middle">
+            <thead><tr><th>ID</th><th>운송사ID</th><th>출발지</th><th>도착지</th><th>픽업시간</th><th>배송시간</th><th>컨테이너</th><th>수량</th><th>예산</th><th>상태</th><th>상세</th><th>작업</th></tr></thead><tbody>`;
+        for (const r of requests) {
+            html += `<tr>
+                <td>${r.id}</td>
+                <td>${r.carrier_id}</td>
+                <td>${r.origin}</td>
+                <td>${r.destination}</td>
+                <td>${r.pickup_time? r.pickup_time.replace('T',' ').slice(0,16):''}</td>
+                <td>${r.delivery_time? r.delivery_time.replace('T',' ').slice(0,16):''}</td>
+                <td>${r.container_type}</td>
+                <td>${r.container_count}</td>
+                <td>${r.budget||''}</td>
+                <td>${r.status||''}</td>
+                <td>${r.cargo_details||''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1 edit-request-btn" data-id="${r.id}"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger delete-request-btn" data-id="${r.id}"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('requests-list').innerHTML = html;
+    }
+    // 추가 버튼 클릭
+    if(document.getElementById('add-request-btn')) {
+        document.getElementById('add-request-btn').onclick = function() {
+            document.getElementById('requestModal2Label').innerText = '운송 요청 추가';
+            document.getElementById('request-form2').reset();
+            document.getElementById('request-id').value = '';
+            new bootstrap.Modal(document.getElementById('requestModal2')).show();
+        };
+    }
+    // 저장(추가/수정)
+    document.getElementById('save-request2').onclick = async function() {
+        const id = document.getElementById('request-id').value;
+        const data = {
+            carrier_id: document.getElementById('request-carrier-id-2').value,
+            origin: document.getElementById('request-origin-2').value,
+            destination: document.getElementById('request-destination-2').value,
+            pickup_time: document.getElementById('request-pickup-2').value,
+            delivery_time: document.getElementById('request-delivery-2').value,
+            container_type: document.getElementById('request-container-type-2').value,
+            container_count: document.getElementById('request-container-count-2').value,
+            budget: document.getElementById('request-budget-2').value,
+            cargo_details: document.getElementById('request-cargo-details-2').value
+        };
+        if (id) {
+            data.id = id;
+            const res = await fetch('/api/delivery-requests', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('requestModal2')).hide();
+                loadRequests2();
+            } else {
+                alert('수정 실패');
+            }
+        } else {
+            const res = await fetch('/api/delivery-requests', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('requestModal2')).hide();
+                loadRequests2();
+            } else {
+                alert('생성 실패');
+            }
+        }
+    };
+    // 수정/삭제 버튼 이벤트
+    document.getElementById('requests-list').onclick = async function(e) {
+        if (e.target.closest('.edit-request-btn')) {
+            const id = e.target.closest('.edit-request-btn').dataset.id;
+            const res = await fetch('/api/delivery-requests');
+            const requests = await res.json();
+            const r = requests.find(x=>x.id==id);
+            if (!r) return;
+            document.getElementById('requestModal2Label').innerText = '운송 요청 수정';
+            document.getElementById('request-id').value = r.id;
+            document.getElementById('request-carrier-id-2').value = r.carrier_id;
+            document.getElementById('request-origin-2').value = r.origin;
+            document.getElementById('request-destination-2').value = r.destination;
+            document.getElementById('request-pickup-2').value = r.pickup_time? r.pickup_time.slice(0,16):'';
+            document.getElementById('request-delivery-2').value = r.delivery_time? r.delivery_time.slice(0,16):'';
+            document.getElementById('request-container-type-2').value = r.container_type;
+            document.getElementById('request-container-count-2').value = r.container_count;
+            document.getElementById('request-budget-2').value = r.budget||'';
+            document.getElementById('request-cargo-details-2').value = r.cargo_details||'';
+            new bootstrap.Modal(document.getElementById('requestModal2')).show();
+        }
+        if (e.target.closest('.delete-request-btn')) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const id = e.target.closest('.delete-request-btn').dataset.id;
+            const res = await fetch(`/api/delivery-requests?id=${id}`, {method:'DELETE'});
+            if (res.ok) loadRequests2();
+            else alert('삭제 실패');
+        }
+    };
+    // 탭 활성화 시 운송 요청 목록 로드
+    document.getElementById('requests-tab').addEventListener('shown.bs.tab', loadRequests2);
+    // 입력값 placeholder UX 개선 (운송 요청)
+    const requestPlaceholders = {
+        'request-carrier-id-2': '숫자만 입력',
+        'request-origin-2': '출발지 입력',
+        'request-destination-2': '도착지 입력',
+        'request-pickup-2': 'YYYY-MM-DD HH:MM',
+        'request-delivery-2': 'YYYY-MM-DD HH:MM',
+        'request-container-count-2': '숫자 입력',
+        'request-budget-2': '숫자 입력',
+        'request-cargo-details-2': '상세 정보 입력'
+    };
+    for (const id in requestPlaceholders) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.addEventListener('input', function() {
+            if (this.value) this.placeholder = '';
+            else this.placeholder = requestPlaceholders[id];
+        });
+    }
+    </script>
 </body>
 </html>
