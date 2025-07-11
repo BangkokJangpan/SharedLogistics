@@ -357,6 +357,11 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            setupEventListeners();
+        });
+
         // Socket.IO 연결
         const socket = io('http://localhost:5000');
         let map, marker, path;
@@ -666,6 +671,106 @@
         // GPS 시작 버튼 (개발용)
         function startGPS() {
             startGPSUpdates();
+        }
+
+        function setupEventListeners() {
+            // 로그인 폼
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) loginForm.addEventListener('submit', login);
+
+            // 회원가입 폼
+            const registerForm = document.getElementById('register-form');
+            if (registerForm) registerForm.addEventListener('submit', register);
+
+            // 회원가입/로그인 전환 버튼
+            const showRegisterBtn = document.getElementById('show-register-btn');
+            if (showRegisterBtn) showRegisterBtn.addEventListener('click', showRegisterSection);
+
+            const backToLoginBtn = document.getElementById('back-to-login');
+            if (backToLoginBtn) backToLoginBtn.addEventListener('click', showLoginForm);
+
+            // 로그아웃
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) logoutBtn.addEventListener('click', function() {
+                sessionStorage.removeItem('auth_token');
+                currentUser = null;
+                currentUserRole = null;
+                onLogoutOrLoginFail();
+            });
+
+            // 역할 선택
+            const regRole = document.getElementById('reg-role');
+            if (regRole) regRole.addEventListener('change', toggleRoleFields);
+
+            // 탭
+            const tolerancesTab = document.getElementById('tolerances-tab');
+            if (tolerancesTab) tolerancesTab.addEventListener('click', function() {
+                setTimeout(loadTolerances, 100);
+            });
+
+            const requestsTab = document.getElementById('requests-tab');
+            if (requestsTab) requestsTab.addEventListener('click', function() {
+                setTimeout(loadRequests, 100);
+            });
+
+            const matchesTab = document.getElementById('matches-tab');
+            if (matchesTab) matchesTab.addEventListener('click', function() {
+                setTimeout(loadMatches, 100);
+            });
+
+            const adminTab = document.getElementById('admin-tab');
+            if (adminTab) adminTab.addEventListener('click', function() {
+                setTimeout(loadAdminStatistics, 100);
+            });
+
+            // 모달 버튼
+            const addToleranceBtn = document.getElementById('add-tolerance-btn');
+            if (addToleranceBtn) addToleranceBtn.addEventListener('click', showToleranceForm);
+
+            const addRequestBtn = document.getElementById('add-request-btn');
+            if (addRequestBtn) addRequestBtn.addEventListener('click', showRequestForm);
+
+            const saveToleranceBtn = document.getElementById('save-tolerance');
+            if (saveToleranceBtn) saveToleranceBtn.addEventListener('click', submitTolerance);
+
+            const saveRequestBtn = document.getElementById('save-request');
+            if (saveRequestBtn) saveRequestBtn.addEventListener('click', submitRequest);
+
+            // 자동 매칭
+            const autoMatchBtn = document.getElementById('auto-match-btn');
+            if (autoMatchBtn) autoMatchBtn.addEventListener('click', autoMatch);
+
+            const autoMatchAdminBtn = document.getElementById('auto-match-admin-btn');
+            if (autoMatchAdminBtn) autoMatchAdminBtn.addEventListener('click', autoMatch);
+
+            // 관리자 탭/버튼
+            const refreshStatsBtn = document.getElementById('refresh-stats-btn');
+            if (refreshStatsBtn) refreshStatsBtn.addEventListener('click', loadAdminStatistics);
+
+            const statisticsTab = document.getElementById('statistics-tab');
+            if (statisticsTab) statisticsTab.addEventListener('click', function() {
+                setTimeout(loadAdminStatistics, 100);
+            });
+
+            const usersTab = document.getElementById('users-tab');
+            if (usersTab) usersTab.addEventListener('click', function() {
+                setTimeout(loadAdminUsers, 100);
+            });
+
+            const carriersTab = document.getElementById('carriers-tab');
+            if (carriersTab) carriersTab.addEventListener('click', function() {
+                setTimeout(loadAdminCarriers, 100);
+            });
+
+            const driversTab = document.getElementById('drivers-tab');
+            if (driversTab) driversTab.addEventListener('click', function() {
+                setTimeout(loadAdminDrivers, 100);
+            });
+
+            const vehiclesTab = document.getElementById('vehicles-tab');
+            if (vehiclesTab) vehiclesTab.addEventListener('click', function() {
+                setTimeout(loadAdminVehicles, 100);
+            });
         }
     </script>
 </body>
