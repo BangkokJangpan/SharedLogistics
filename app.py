@@ -1,10 +1,10 @@
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-class Base(DeclarativeBase):
+# SQLAlchemy 1.4 호환성을 위한 Base 클래스
+class Base:
     pass
 
 app = Flask(__name__)

@@ -23,20 +23,28 @@ function checkAuthStatus() {
 
 // Set up event listeners
 function setupEventListeners() {
+    // Helper function to safely add event listener
+    function safeAddEventListener(id, event, handler) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener(event, handler);
+        }
+    }
+    
     // Login form
-    document.getElementById('login-form').addEventListener('submit', login);
+    safeAddEventListener('login-form', 'submit', login);
     
     // Register form
-    document.getElementById('register-form').addEventListener('submit', register);
+    safeAddEventListener('register-form', 'submit', register);
     
     // Show register section
-    document.getElementById('show-register-btn').addEventListener('click', showRegisterSection);
+    safeAddEventListener('show-register-btn', 'click', showRegisterSection);
     
     // Back to login
-    document.getElementById('back-to-login').addEventListener('click', showLoginForm);
+    safeAddEventListener('back-to-login', 'click', showLoginForm);
     
     // Logout
-    document.getElementById('logout-btn').addEventListener('click', function() {
+    safeAddEventListener('logout-btn', 'click', function() {
         sessionStorage.removeItem('auth_token');
         currentUser = null;
         currentUserRole = null;
@@ -44,51 +52,54 @@ function setupEventListeners() {
     });
     
     // Role selection change
-    document.getElementById('reg-role').addEventListener('change', toggleRoleFields);
+    safeAddEventListener('reg-role', 'change', toggleRoleFields);
     
     // Tab change listeners
-    document.getElementById('tolerances-tab').addEventListener('click', function() {
+    safeAddEventListener('tolerances-tab', 'click', function() {
         setTimeout(loadTolerances, 100);
     });
     
-    document.getElementById('requests-tab').addEventListener('click', function() {
+    safeAddEventListener('requests-tab', 'click', function() {
         setTimeout(loadRequests, 100);
     });
     
-    document.getElementById('matches-tab').addEventListener('click', function() {
+    safeAddEventListener('matches-tab', 'click', function() {
         setTimeout(loadMatches, 100);
     });
     
     // Admin tab listener
-    document.getElementById('admin-tab').addEventListener('click', function() {
+    safeAddEventListener('admin-tab', 'click', function() {
+        console.log('Admin tab clicked');
         setTimeout(loadAdminStatistics, 100);
     });
     
     // Modal buttons
-    document.getElementById('add-tolerance-btn').addEventListener('click', showToleranceForm);
-    document.getElementById('add-request-btn').addEventListener('click', showRequestForm);
-    document.getElementById('save-tolerance').addEventListener('click', submitTolerance);
-    document.getElementById('save-request').addEventListener('click', submitRequest);
+    safeAddEventListener('add-tolerance-btn', 'click', showToleranceForm);
+    safeAddEventListener('add-request-btn', 'click', showRequestForm);
+    safeAddEventListener('save-tolerance', 'click', submitTolerance);
+    safeAddEventListener('save-request', 'click', submitRequest);
     
     // Auto match buttons
-    document.getElementById('auto-match-btn').addEventListener('click', autoMatch);
-    document.getElementById('auto-match-admin-btn').addEventListener('click', autoMatch);
+    safeAddEventListener('auto-match-btn', 'click', autoMatch);
+    safeAddEventListener('auto-match-admin-btn', 'click', autoMatch);
     
     // Admin buttons
-    document.getElementById('refresh-stats-btn').addEventListener('click', loadAdminStatistics);
-    document.getElementById('statistics-tab').addEventListener('click', function() {
+    safeAddEventListener('refresh-stats-btn', 'click', loadAdminStatistics);
+    safeAddEventListener('statistics-tab', 'click', function() {
         setTimeout(loadAdminStatistics, 100);
     });
-    document.getElementById('users-tab').addEventListener('click', function() {
+    safeAddEventListener('users-tab', 'click', function() {
         setTimeout(loadAdminUsers, 100);
     });
-    document.getElementById('carriers-tab').addEventListener('click', function() {
+    safeAddEventListener('carriers-tab', 'click', function() {
+        console.log('Carriers tab clicked');
         setTimeout(loadAdminCarriers, 100);
     });
-    document.getElementById('drivers-tab').addEventListener('click', function() {
+    safeAddEventListener('drivers-tab', 'click', function() {
+        console.log('Drivers tab clicked');
         setTimeout(loadAdminDrivers, 100);
     });
-    document.getElementById('vehicles-tab').addEventListener('click', function() {
+    safeAddEventListener('vehicles-tab', 'click', function() {
         setTimeout(loadAdminVehicles, 100);
     });
 }
@@ -197,11 +208,21 @@ function showMainSection() {
     if (currentUser) {
         document.getElementById('user-info').textContent = `${currentUser.full_name} (${getRoleText(currentUser.role)})`;
         document.getElementById('logout-btn').style.display = 'inline-block';
+        console.log('Current user role:', currentUser.role);
     }
     
     setupRoleBasedUI();
     loadDashboard();
     loadTolerances();
+    
+    // Force admin tab visibility if admin
+    if (currentUser && currentUser.role === 'admin') {
+        const adminTab = document.getElementById('admin-tab-item');
+        if (adminTab) {
+            adminTab.style.display = 'block';
+            console.log('Admin tab forced to visible');
+        }
+    }
 }
 
 function showLoginForm() {
@@ -219,13 +240,27 @@ function setupRoleBasedUI() {
     const role = currentUser.role;
     
     // Show/hide buttons based on role
-    document.getElementById('add-tolerance-btn').style.display = role === 'carrier' ? 'inline-block' : 'none';
-    document.getElementById('add-request-btn').style.display = role === 'carrier' ? 'inline-block' : 'none';
-    document.getElementById('auto-match-btn').style.display = role === 'admin' ? 'inline-block' : 'none';
+    const addToleranceBtn = document.getElementById('add-tolerance-btn');
+    const addRequestBtn = document.getElementById('add-request-btn');
+    const autoMatchBtn = document.getElementById('auto-match-btn');
+    
+    if (addToleranceBtn) addToleranceBtn.style.display = role === 'carrier' ? 'inline-block' : 'none';
+    if (addRequestBtn) addRequestBtn.style.display = role === 'carrier' ? 'inline-block' : 'none';
+    if (autoMatchBtn) autoMatchBtn.style.display = role === 'admin' ? 'inline-block' : 'none';
     
     // Show/hide admin tab
     const adminTab = document.getElementById('admin-tab-item');
-    if (adminTab) adminTab.style.display = role === 'admin' ? 'block' : 'none';
+    if (adminTab) {
+        adminTab.style.display = role === 'admin' ? 'block' : 'none';
+        console.log('Admin tab visibility set to:', role === 'admin' ? 'visible' : 'hidden');
+    }
+    
+    // If admin, load admin data
+    if (role === 'admin') {
+        setTimeout(() => {
+            loadAdminStatistics();
+        }, 100);
+    }
 }
 
 // Toggle role-specific fields
@@ -526,13 +561,13 @@ function renderMatches(matches) {
                     <small class="text-muted">${formatDateTime(match.tolerance.departure_time)}</small>
                 </td>
                 <td>
-                    <strong>${match.request.carrier_name}</strong><br>
-                    ${match.request.origin} → ${match.request.destination}<br>
-                    <small class="text-muted">${formatDateTime(match.request.pickup_time)}</small>
+                    <strong>${match.delivery_request.carrier_name}</strong><br>
+                    ${match.delivery_request.origin} → ${match.delivery_request.destination}<br>
+                    <small class="text-muted">${formatDateTime(match.delivery_request.pickup_time)}</small>
                 </td>
                 <td>${match.driver.name || '미배정'}<br><small class="text-muted">${match.driver.vehicle_number || ''}</small></td>
                 <td><span class="badge ${getStatusBadgeClass(match.status)}">${getStatusText(match.status)}</span></td>
-                <td>${formatDateTime(match.matched_at)}</td>
+                <td>${formatDateTime(match.created_at)}</td>
                 <td>${getMatchActions(match)}</td>
             </tr>
         `;
@@ -544,7 +579,7 @@ function renderMatches(matches) {
 
 // Get match actions
 function getMatchActions(match) {
-    if (match.status === 'proposed') {
+    if (match.status === 'pending') {
         return `
             <button class="btn btn-success btn-sm me-1" onclick="acceptMatch(${match.id})">수락</button>
             <button class="btn btn-danger btn-sm" onclick="rejectMatch(${match.id})">거절</button>

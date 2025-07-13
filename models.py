@@ -30,6 +30,7 @@ class Carrier(db.Model):
     address = db.Column(db.String(200))
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
+    status = db.Column(db.String(20), default='active')  # active, inactive, suspended
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
@@ -49,6 +50,7 @@ class Driver(db.Model):
     vehicle_type = db.Column(db.String(50))
     vehicle_number = db.Column(db.String(20))
     status = db.Column(db.String(20), default='available')  # available, busy, offline
+    current_location = db.Column(db.String(200))  # Current location as string
     current_location_lat = db.Column(db.Float)
     current_location_lng = db.Column(db.Float)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

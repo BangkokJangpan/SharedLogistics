@@ -209,212 +209,334 @@ def dashboard():
             'current_status': driver.status
         })
 
-@app.route('/api/tolerances', methods=['GET', 'POST'])
+@app.route('/api/tolerances', methods=['GET', 'POST', 'PUT'])
 @login_required
 def tolerances():
-    user = request.user
-    
-    if request.method == 'POST':
-        if user.role != 'carrier':
-            return jsonify({'error': '운송사만 여유 운송을 등록할 수 있습니다'}), 403
+    try:
+        user = request.user
         
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        if not carrier:
-            return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+        if request.method == 'POST':
+            if user.role != 'carrier':
+                return jsonify({'error': '운송사만 여유 운송을 등록할 수 있습니다'}), 403
+            
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            
+            data = request.get_json()
+            tolerance = Tolerance(
+                carrier_id=carrier.id,
+                origin=data['origin'],
+                destination=data['destination'],
+                departure_time=datetime.fromisoformat(data['departure_time']),
+                arrival_time=datetime.fromisoformat(data['arrival_time']) if data.get('arrival_time') else None,
+                container_type=data['container_type'],
+                container_count=data.get('container_count', 1),
+                is_empty_run=data.get('is_empty_run', False),
+                price=data.get('price', 0)
+            )
+            
+            db.session.add(tolerance)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '여유 운송이 등록되었습니다'})
         
-        data = request.get_json()
-        tolerance = Tolerance(
-            carrier_id=carrier.id,
-            origin=data['origin'],
-            destination=data['destination'],
-            departure_time=datetime.fromisoformat(data['departure_time']),
-            arrival_time=datetime.fromisoformat(data['arrival_time']) if data.get('arrival_time') else None,
-            container_type=data['container_type'],
-            container_count=data.get('container_count', 1),
-            is_empty_run=data.get('is_empty_run', False),
-            price=data.get('price', 0)
-        )
+        elif request.method == 'PUT':
+            if user.role != 'carrier':
+                return jsonify({'error': '운송사만 여유 운송을 수정할 수 있습니다'}), 403
+            
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            
+            data = request.get_json()
+            tolerance_id = data.get('id')
+            
+            if not tolerance_id:
+                return jsonify({'error': '여유 운송 ID가 필요합니다'}), 400
+            
+            tolerance = Tolerance.query.get_or_404(tolerance_id)
+            
+            # 권한 확인
+            if tolerance.carrier_id != carrier.id:
+                return jsonify({'error': '이 여유 운송을 수정할 권한이 없습니다'}), 403
+            
+            # 필드 업데이트
+            if 'origin' in data:
+                tolerance.origin = data['origin']
+            if 'destination' in data:
+                tolerance.destination = data['destination']
+            if 'departure_time' in data:
+                tolerance.departure_time = datetime.fromisoformat(data['departure_time'])
+            if 'arrival_time' in data:
+                tolerance.arrival_time = datetime.fromisoformat(data['arrival_time']) if data.get('arrival_time') else None
+            if 'container_type' in data:
+                tolerance.container_type = data['container_type']
+            if 'container_count' in data:
+                tolerance.container_count = data['container_count']
+            if 'is_empty_run' in data:
+                tolerance.is_empty_run = data['is_empty_run']
+            if 'price' in data:
+                tolerance.price = data['price']
+            if 'status' in data:
+                tolerance.status = data['status']
+            
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '여유 운송이 수정되었습니다'})
         
-        db.session.add(tolerance)
-        db.session.commit()
+        # GET request
+        if user.role == 'carrier':
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            tolerances = Tolerance.query.filter_by(carrier_id=carrier.id).all()
+        else:
+            tolerances = Tolerance.query.filter_by(status='available').all()
         
-        return jsonify({'success': True, 'message': '여유 운송이 등록되었습니다'})
+        result = []
+        for tolerance in tolerances:
+            result.append({
+                'id': tolerance.id,
+                'carrier_id': tolerance.carrier_id,
+                'carrier_name': tolerance.carrier.company_name if tolerance.carrier else 'N/A',
+                'origin': tolerance.origin,
+                'destination': tolerance.destination,
+                'departure_time': tolerance.departure_time.isoformat(),
+                'arrival_time': tolerance.arrival_time.isoformat() if tolerance.arrival_time else None,
+                'container_type': tolerance.container_type,
+                'container_count': tolerance.container_count,
+                'is_empty_run': tolerance.is_empty_run,
+                'price': float(tolerance.price) if tolerance.price else 0,
+                'status': tolerance.status,
+                'created_at': tolerance.created_at.isoformat() if tolerance.created_at else None
+            })
+        
+        return jsonify(result)
     
-    # GET request
-    if user.role == 'carrier':
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        tolerances = Tolerance.query.filter_by(carrier_id=carrier.id).all()
-    else:
-        tolerances = Tolerance.query.filter_by(status='available').all()
-    
-    result = []
-    for tolerance in tolerances:
-        result.append({
-            'id': tolerance.id,
-            'carrier_name': tolerance.carrier.company_name,
-            'origin': tolerance.origin,
-            'destination': tolerance.destination,
-            'departure_time': tolerance.departure_time.isoformat(),
-            'arrival_time': tolerance.arrival_time.isoformat() if tolerance.arrival_time else None,
-            'container_type': tolerance.container_type,
-            'container_count': tolerance.container_count,
-            'is_empty_run': tolerance.is_empty_run,
-            'price': float(tolerance.price) if tolerance.price else 0,
-            'status': tolerance.status,
-            'created_at': tolerance.created_at.isoformat()
-        })
-    
-    return jsonify(result)
+    except Exception as e:
+        db.session.rollback()
+        print(f"Tolerances 오류: {str(e)}")  # 서버 로그에 오류 출력
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
-@app.route('/api/delivery-requests', methods=['GET', 'POST'])
+@app.route('/api/delivery-requests', methods=['GET', 'POST', 'PUT'])
 @login_required
 def delivery_requests():
-    user = request.user
-    
-    if request.method == 'POST':
-        if user.role != 'carrier':
-            return jsonify({'error': '운송사만 운송 요청을 등록할 수 있습니다'}), 403
+    try:
+        user = request.user
         
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        if not carrier:
-            return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+        if request.method == 'POST':
+            if user.role != 'carrier':
+                return jsonify({'error': '운송사만 운송 요청을 등록할 수 있습니다'}), 403
+            
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            
+            data = request.get_json()
+            delivery_request = DeliveryRequest(
+                carrier_id=carrier.id,
+                origin=data['origin'],
+                destination=data['destination'],
+                pickup_time=datetime.fromisoformat(data['pickup_time']),
+                delivery_time=datetime.fromisoformat(data['delivery_time']) if data.get('delivery_time') else None,
+                container_type=data['container_type'],
+                container_count=data.get('container_count', 1),
+                cargo_details_json=json.dumps(data.get('cargo_details', {})),
+                budget=data.get('budget', 0)
+            )
+            
+            db.session.add(delivery_request)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '운송 요청이 등록되었습니다'})
         
-        data = request.get_json()
-        delivery_request = DeliveryRequest(
-            carrier_id=carrier.id,
-            origin=data['origin'],
-            destination=data['destination'],
-            pickup_time=datetime.fromisoformat(data['pickup_time']),
-            delivery_time=datetime.fromisoformat(data['delivery_time']) if data.get('delivery_time') else None,
-            container_type=data['container_type'],
-            container_count=data.get('container_count', 1),
-            cargo_details_json=json.dumps(data.get('cargo_details', {})),
-            budget=data.get('budget', 0)
-        )
+        elif request.method == 'PUT':
+            if user.role != 'carrier':
+                return jsonify({'error': '운송사만 운송 요청을 수정할 수 있습니다'}), 403
+            
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            
+            data = request.get_json()
+            request_id = data.get('id')
+            
+            if not request_id:
+                return jsonify({'error': '운송 요청 ID가 필요합니다'}), 400
+            
+            delivery_request = DeliveryRequest.query.get_or_404(request_id)
+            
+            # 권한 확인
+            if delivery_request.carrier_id != carrier.id:
+                return jsonify({'error': '이 운송 요청을 수정할 권한이 없습니다'}), 403
+            
+            # 필드 업데이트
+            if 'origin' in data:
+                delivery_request.origin = data['origin']
+            if 'destination' in data:
+                delivery_request.destination = data['destination']
+            if 'pickup_time' in data:
+                delivery_request.pickup_time = datetime.fromisoformat(data['pickup_time'])
+            if 'delivery_time' in data:
+                delivery_request.delivery_time = datetime.fromisoformat(data['delivery_time']) if data.get('delivery_time') else None
+            if 'container_type' in data:
+                delivery_request.container_type = data['container_type']
+            if 'container_count' in data:
+                delivery_request.container_count = data['container_count']
+            if 'cargo_details' in data:
+                delivery_request.cargo_details_json = json.dumps(data['cargo_details'])
+            if 'budget' in data:
+                delivery_request.budget = data['budget']
+            if 'status' in data:
+                delivery_request.status = data['status']
+            
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '운송 요청이 수정되었습니다'})
         
-        db.session.add(delivery_request)
-        db.session.commit()
+        # GET request
+        if user.role == 'carrier':
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            requests = DeliveryRequest.query.filter_by(carrier_id=carrier.id).all()
+        else:
+            requests = DeliveryRequest.query.filter_by(status='pending').all()
         
-        return jsonify({'success': True, 'message': '운송 요청이 등록되었습니다'})
+        result = []
+        for req in requests:
+            result.append({
+                'id': req.id,
+                'carrier_id': req.carrier_id,
+                'carrier_name': req.carrier.company_name if req.carrier else 'N/A',
+                'origin': req.origin,
+                'destination': req.destination,
+                'pickup_time': req.pickup_time.isoformat(),
+                'delivery_time': req.delivery_time.isoformat() if req.delivery_time else None,
+                'container_type': req.container_type,
+                'container_count': req.container_count,
+                'cargo_details': json.loads(req.cargo_details_json) if req.cargo_details_json else {},
+                'budget': float(req.budget) if req.budget else 0,
+                'status': req.status,
+                'created_at': req.created_at.isoformat() if req.created_at else None
+            })
+        
+        return jsonify(result)
     
-    # GET request
-    if user.role == 'carrier':
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        requests = DeliveryRequest.query.filter_by(carrier_id=carrier.id).all()
-    else:
-        requests = DeliveryRequest.query.filter_by(status='pending').all()
-    
-    result = []
-    for req in requests:
-        result.append({
-            'id': req.id,
-            'carrier_name': req.carrier.company_name,
-            'origin': req.origin,
-            'destination': req.destination,
-            'pickup_time': req.pickup_time.isoformat(),
-            'delivery_time': req.delivery_time.isoformat() if req.delivery_time else None,
-            'container_type': req.container_type,
-            'container_count': req.container_count,
-            'cargo_details': json.loads(req.cargo_details_json) if req.cargo_details_json else {},
-            'budget': float(req.budget) if req.budget else 0,
-            'status': req.status,
-            'created_at': req.created_at.isoformat()
-        })
-    
-    return jsonify(result)
+    except Exception as e:
+        db.session.rollback()
+        print(f"Delivery requests 오류: {str(e)}")  # 서버 로그에 오류 출력
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/matches', methods=['GET'])
 @login_required
 def matches():
-    user = request.user
+    try:
+        user = request.user
+        
+        if user.role == 'carrier':
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if not carrier:
+                return jsonify({'error': '운송사 정보를 찾을 수 없습니다'}), 404
+            matches = Match.query.join(Tolerance).filter(Tolerance.carrier_id == carrier.id).all()
+        elif user.role == 'driver':
+            driver = Driver.query.filter_by(user_id=user.id).first()
+            if not driver:
+                return jsonify({'error': '기사 정보를 찾을 수 없습니다'}), 404
+            matches = Match.query.filter_by(driver_id=driver.id).all()
+        else:
+            matches = Match.query.all()
+        
+        result = []
+        for match in matches:
+            result.append({
+                'id': match.id,
+                'tolerance': {
+                    'id': match.tolerance.id,
+                    'origin': match.tolerance.origin,
+                    'destination': match.tolerance.destination,
+                    'departure_time': match.tolerance.departure_time.isoformat(),
+                    'container_type': match.tolerance.container_type,
+                    'carrier_name': match.tolerance.carrier.company_name
+                },
+                'delivery_request': {
+                    'id': match.delivery_request.id,
+                    'origin': match.delivery_request.origin,
+                    'destination': match.delivery_request.destination,
+                    'pickup_time': match.delivery_request.pickup_time.isoformat(),
+                    'container_type': match.delivery_request.container_type,
+                    'carrier_name': match.delivery_request.carrier.company_name
+                },
+                'driver': {
+                    'name': match.driver.user.full_name if match.driver and match.driver.user else None,
+                    'vehicle_number': match.driver.vehicle_number if match.driver else None
+                },
+                'status': match.status,
+                'created_at': match.created_at.isoformat() if match.created_at else None
+            })
+        
+        return jsonify(result)
     
-    if user.role == 'carrier':
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        matches = Match.query.join(Tolerance).filter(Tolerance.carrier_id == carrier.id).all()
-    elif user.role == 'driver':
-        driver = Driver.query.filter_by(user_id=user.id).first()
-        matches = Match.query.filter_by(driver_id=driver.id).all()
-    else:
-        matches = Match.query.all()
-    
-    result = []
-    for match in matches:
-        result.append({
-            'id': match.id,
-            'tolerance': {
-                'id': match.tolerance.id,
-                'origin': match.tolerance.origin,
-                'destination': match.tolerance.destination,
-                'departure_time': match.tolerance.departure_time.isoformat(),
-                'container_type': match.tolerance.container_type,
-                'carrier_name': match.tolerance.carrier.company_name
-            },
-            'request': {
-                'id': match.request.id,
-                'origin': match.request.origin,
-                'destination': match.request.destination,
-                'pickup_time': match.request.pickup_time.isoformat(),
-                'container_type': match.request.container_type,
-                'carrier_name': match.request.carrier.company_name
-            },
-            'driver': {
-                'name': match.driver.user.full_name if match.driver else None,
-                'vehicle_number': match.driver.vehicle_number if match.driver else None
-            },
-            'status': match.status,
-            'matched_at': match.matched_at.isoformat()
-        })
-    
-    return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/matches/<int:match_id>/accept', methods=['POST'])
 @login_required
 def accept_match(match_id):
-    user = request.user
+    try:
+        user = request.user
+        
+        match = Match.query.get_or_404(match_id)
+        
+        # Check if user has permission to accept this match
+        if user.role == 'carrier':
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if match.tolerance.carrier_id != carrier.id and match.delivery_request.carrier_id != carrier.id:
+                return jsonify({'error': '이 매칭을 수락할 권한이 없습니다'}), 403
+        
+        match.status = 'accepted'
+        
+        # Update tolerance and request status
+        match.tolerance.status = 'matched'
+        match.delivery_request.status = 'matched'
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '매칭이 수락되었습니다'})
     
-    match = Match.query.get_or_404(match_id)
-    
-    # Check if user has permission to accept this match
-    if user.role == 'carrier':
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        if match.tolerance.carrier_id != carrier.id and match.request.carrier_id != carrier.id:
-            return jsonify({'error': '이 매칭을 수락할 권한이 없습니다'}), 403
-    
-    match.status = 'accepted'
-    match.accepted_at = datetime.utcnow()
-    
-    # Update tolerance and request status
-    match.tolerance.status = 'matched'
-    match.request.status = 'matched'
-    
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': '매칭이 수락되었습니다'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/matches/<int:match_id>/reject', methods=['POST'])
 @login_required
 def reject_match(match_id):
-    user = request.user
+    try:
+        user = request.user
+        
+        match = Match.query.get_or_404(match_id)
+        data = request.get_json()
+        
+        # Check if user has permission to reject this match
+        if user.role == 'carrier':
+            carrier = Carrier.query.filter_by(user_id=user.id).first()
+            if match.tolerance.carrier_id != carrier.id and match.delivery_request.carrier_id != carrier.id:
+                return jsonify({'error': '이 매칭을 거절할 권한이 없습니다'}), 403
+        
+        match.status = 'rejected'
+        
+        # Reset tolerance and request status
+        match.tolerance.status = 'available'
+        match.delivery_request.status = 'pending'
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '매칭이 거절되었습니다'})
     
-    match = Match.query.get_or_404(match_id)
-    data = request.get_json()
-    
-    # Check if user has permission to reject this match
-    if user.role == 'carrier':
-        carrier = Carrier.query.filter_by(user_id=user.id).first()
-        if match.tolerance.carrier_id != carrier.id and match.request.carrier_id != carrier.id:
-            return jsonify({'error': '이 매칭을 거절할 권한이 없습니다'}), 403
-    
-    match.status = 'rejected'
-    match.rejection_reason = data.get('reason', '')
-    
-    # Reset tolerance and request status
-    match.tolerance.status = 'available'
-    match.request.status = 'pending'
-    
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': '매칭이 거절되었습니다'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/location/update', methods=['POST'])
 @login_required
@@ -487,47 +609,57 @@ def get_carriers():
 @login_required
 def auto_match():
     """Basic auto-matching algorithm"""
-    user = request.user
-    
-    if user.role != 'admin':
-        return jsonify({'error': '관리자만 자동 매칭을 실행할 수 있습니다'}), 403
-    
-    # Get available tolerances and pending requests
-    tolerances = Tolerance.query.filter_by(status='available').all()
-    requests = DeliveryRequest.query.filter_by(status='pending').all()
-    
-    matches_created = 0
-    
-    for tolerance in tolerances:
-        for request in requests:
-            # Basic matching criteria
-            if (tolerance.origin == request.origin and 
-                tolerance.destination == request.destination and
-                tolerance.container_type == request.container_type and
-                tolerance.departure_time.date() == request.pickup_time.date()):
-                
-                # Check if match already exists
-                existing_match = Match.query.filter_by(
-                    tolerance_id=tolerance.id,
-                    request_id=request.id
-                ).first()
-                
-                if not existing_match:
-                    # Create new match
-                    match = Match(
+    try:
+        # 사용자 인증 확인
+        if not hasattr(request, 'user') or not request.user:
+            return jsonify({'error': '사용자 인증이 필요합니다'}), 401
+        
+        user = request.user
+        
+        if user.role != 'admin':
+            return jsonify({'error': '관리자만 자동 매칭을 실행할 수 있습니다'}), 403
+        
+        # Get available tolerances and pending requests
+        tolerances = Tolerance.query.filter_by(status='available').all()
+        requests = DeliveryRequest.query.filter_by(status='pending').all()
+        
+        matches_created = 0
+        
+        for tolerance in tolerances:
+            for request in requests:
+                # Basic matching criteria
+                if (tolerance.origin == request.origin and 
+                    tolerance.destination == request.destination and
+                    tolerance.container_type == request.container_type and
+                    tolerance.departure_time.date() == request.pickup_time.date()):
+                    
+                    # Check if match already exists
+                    existing_match = Match.query.filter_by(
                         tolerance_id=tolerance.id,
-                        request_id=request.id,
-                        status='proposed'
-                    )
-                    db.session.add(match)
-                    matches_created += 1
+                        delivery_request_id=request.id
+                    ).first()
+                    
+                    if not existing_match:
+                        # Create new match
+                        match = Match(
+                            tolerance_id=tolerance.id,
+                            delivery_request_id=request.id,
+                            status='pending'
+                        )
+                        db.session.add(match)
+                        matches_created += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{matches_created}개의 매칭이 생성되었습니다'
+        })
     
-    db.session.commit()
-    
-    return jsonify({
-        'success': True,
-        'message': f'{matches_created}개의 매칭이 생성되었습니다'
-    })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Auto-match 오류: {str(e)}")  # 서버 로그에 오류 출력
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/admin/users', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @login_required
@@ -624,142 +756,226 @@ def admin_users():
 @role_required('admin')
 def admin_carriers():
     """Admin carrier management API"""
-    if request.method == 'GET':
-        carriers = Carrier.query.all()
-        result = []
-        for carrier in carriers:
-            result.append({
-                'id': carrier.id,
-                'user_id': carrier.user_id,
-                'username': carrier.user.username,
-                'company_name': carrier.company_name,
-                'business_license': carrier.business_license,
-                'contact_person': carrier.contact_person,
-                'address': carrier.address,
-                'status': carrier.status,
-                'created_at': carrier.created_at.isoformat()
-            })
-        return jsonify(result)
+    try:
+        if request.method == 'GET':
+            carriers = Carrier.query.all()
+            result = []
+            for carrier in carriers:
+                result.append({
+                    'id': carrier.id,
+                    'user_id': carrier.user_id,
+                    'username': carrier.user.username if carrier.user else 'N/A',
+                    'company_name': carrier.company_name,
+                    'business_license': carrier.business_license,
+                    'contact_person': carrier.contact_person,
+                    'address': carrier.address,
+                    'status': getattr(carrier, 'status', 'active'),
+                    'created_at': carrier.created_at.isoformat() if carrier.created_at else None
+                })
+            return jsonify(result)
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            
+            carrier = Carrier(
+                user_id=data['user_id'],
+                company_name=data['company_name'],
+                business_license=data.get('business_license', ''),
+                contact_person=data.get('contact_person', ''),
+                address=data.get('address', ''),
+                status=data.get('status', 'active')
+            )
+            
+            db.session.add(carrier)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '운송사가 생성되었습니다'})
+        
+        elif request.method == 'PUT':
+            data = request.get_json()
+            carrier_id = data.get('id')
+            
+            carrier = Carrier.query.get_or_404(carrier_id)
+            
+            # Update carrier fields
+            if 'company_name' in data:
+                carrier.company_name = data['company_name']
+            if 'business_license' in data:
+                carrier.business_license = data['business_license']
+            if 'contact_person' in data:
+                carrier.contact_person = data['contact_person']
+            if 'address' in data:
+                carrier.address = data['address']
+            if 'status' in data:
+                carrier.status = data['status']
+            
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '운송사가 수정되었습니다'})
+        
+        elif request.method == 'DELETE':
+            carrier_id = request.get_json().get('id')
+            carrier = Carrier.query.get_or_404(carrier_id)
+            
+            db.session.delete(carrier)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '운송사가 삭제되었습니다'})
     
-    elif request.method == 'POST':
-        data = request.get_json()
-        
-        carrier = Carrier(
-            user_id=data['user_id'],
-            company_name=data['company_name'],
-            business_license=data.get('business_license', ''),
-            contact_person=data.get('contact_person', ''),
-            address=data.get('address', ''),
-            status=data.get('status', 'active')
-        )
-        
-        db.session.add(carrier)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': '운송사가 생성되었습니다'})
-    
-    elif request.method == 'PUT':
-        data = request.get_json()
-        carrier_id = data.get('id')
-        
-        carrier = Carrier.query.get_or_404(carrier_id)
-        
-        # Update carrier fields
-        if 'company_name' in data:
-            carrier.company_name = data['company_name']
-        if 'business_license' in data:
-            carrier.business_license = data['business_license']
-        if 'contact_person' in data:
-            carrier.contact_person = data['contact_person']
-        if 'address' in data:
-            carrier.address = data['address']
-        if 'status' in data:
-            carrier.status = data['status']
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': '운송사가 수정되었습니다'})
-    
-    elif request.method == 'DELETE':
-        carrier_id = request.get_json().get('id')
-        carrier = Carrier.query.get_or_404(carrier_id)
-        
-        db.session.delete(carrier)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': '운송사가 삭제되었습니다'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/admin/drivers', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @login_required
 @role_required('admin')
 def admin_drivers():
     """Admin driver management API"""
-    if request.method == 'GET':
-        drivers = Driver.query.all()
-        result = []
-        for driver in drivers:
-            result.append({
-                'id': driver.id,
-                'user_id': driver.user_id,
-                'username': driver.user.username,
-                'carrier_id': driver.carrier_id,
-                'carrier_name': driver.carrier.company_name,
-                'license_number': driver.license_number,
-                'vehicle_type': driver.vehicle_type,
-                'vehicle_number': driver.vehicle_number,
-                'status': driver.status,
-                'current_location': driver.current_location,
-                'created_at': driver.created_at.isoformat()
-            })
-        return jsonify(result)
+    try:
+        if request.method == 'GET':
+            drivers = Driver.query.all()
+            result = []
+            for driver in drivers:
+                result.append({
+                    'id': driver.id,
+                    'user_id': driver.user_id,
+                    'username': driver.user.username if driver.user else 'N/A',
+                    'carrier_id': driver.carrier_id,
+                    'carrier_name': driver.carrier.company_name if driver.carrier else 'N/A',
+                    'license_number': driver.license_number,
+                    'vehicle_type': driver.vehicle_type,
+                    'vehicle_number': driver.vehicle_number,
+                    'status': driver.status,
+                    'current_location': getattr(driver, 'current_location', ''),
+                    'created_at': driver.created_at.isoformat() if driver.created_at else None
+                })
+            return jsonify(result)
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            
+            driver = Driver(
+                user_id=data['user_id'],
+                carrier_id=data['carrier_id'],
+                license_number=data['license_number'],
+                vehicle_type=data.get('vehicle_type', ''),
+                vehicle_number=data.get('vehicle_number', ''),
+                status=data.get('status', 'available')
+            )
+            
+            db.session.add(driver)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '기사가 생성되었습니다'})
+        
+        elif request.method == 'PUT':
+            data = request.get_json()
+            driver_id = data.get('id')
+            
+            driver = Driver.query.get_or_404(driver_id)
+            
+            # Update driver fields
+            if 'carrier_id' in data:
+                driver.carrier_id = data['carrier_id']
+            if 'license_number' in data:
+                driver.license_number = data['license_number']
+            if 'vehicle_type' in data:
+                driver.vehicle_type = data['vehicle_type']
+            if 'vehicle_number' in data:
+                driver.vehicle_number = data['vehicle_number']
+            if 'status' in data:
+                driver.status = data['status']
+            
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '기사가 수정되었습니다'})
+        
+        elif request.method == 'DELETE':
+            driver_id = request.get_json().get('id')
+            driver = Driver.query.get_or_404(driver_id)
+            
+            db.session.delete(driver)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '기사가 삭제되었습니다'})
     
-    elif request.method == 'POST':
-        data = request.get_json()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
+
+@app.route('/api/admin/vehicles', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def admin_vehicles():
+    """Admin vehicle management API"""
+    try:
+        if request.method == 'GET':
+            # Get all drivers with their vehicle information
+            drivers = Driver.query.all()
+            result = []
+            for driver in drivers:
+                result.append({
+                    'id': driver.id,
+                    'driver_name': driver.user.full_name if driver.user else 'N/A',
+                    'carrier_name': driver.carrier.company_name if driver.carrier else 'N/A',
+                    'vehicle_type': driver.vehicle_type,
+                    'vehicle_number': driver.vehicle_number,
+                    'license_number': driver.license_number,
+                    'status': driver.status,
+                    'created_at': driver.created_at.isoformat() if driver.created_at else None
+                })
+            return jsonify(result)
         
-        driver = Driver(
-            user_id=data['user_id'],
-            carrier_id=data['carrier_id'],
-            license_number=data['license_number'],
-            vehicle_type=data.get('vehicle_type', ''),
-            vehicle_number=data.get('vehicle_number', ''),
-            status=data.get('status', 'available')
-        )
+        elif request.method == 'POST':
+            data = request.get_json()
+            
+            # Create new driver with vehicle info
+            driver = Driver(
+                user_id=data['user_id'],
+                carrier_id=data['carrier_id'],
+                license_number=data['license_number'],
+                vehicle_type=data.get('vehicle_type', ''),
+                vehicle_number=data.get('vehicle_number', ''),
+                status=data.get('status', 'available')
+            )
+            
+            db.session.add(driver)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '차량이 등록되었습니다'})
         
-        db.session.add(driver)
-        db.session.commit()
+        elif request.method == 'PUT':
+            data = request.get_json()
+            driver_id = data.get('id')
+            
+            driver = Driver.query.get_or_404(driver_id)
+            
+            # Update vehicle fields
+            if 'vehicle_type' in data:
+                driver.vehicle_type = data['vehicle_type']
+            if 'vehicle_number' in data:
+                driver.vehicle_number = data['vehicle_number']
+            if 'license_number' in data:
+                driver.license_number = data['license_number']
+            if 'status' in data:
+                driver.status = data['status']
+            
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '차량이 수정되었습니다'})
         
-        return jsonify({'success': True, 'message': '기사가 생성되었습니다'})
+        elif request.method == 'DELETE':
+            driver_id = request.get_json().get('id')
+            driver = Driver.query.get_or_404(driver_id)
+            
+            db.session.delete(driver)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'message': '차량이 삭제되었습니다'})
     
-    elif request.method == 'PUT':
-        data = request.get_json()
-        driver_id = data.get('id')
-        
-        driver = Driver.query.get_or_404(driver_id)
-        
-        # Update driver fields
-        if 'carrier_id' in data:
-            driver.carrier_id = data['carrier_id']
-        if 'license_number' in data:
-            driver.license_number = data['license_number']
-        if 'vehicle_type' in data:
-            driver.vehicle_type = data['vehicle_type']
-        if 'vehicle_number' in data:
-            driver.vehicle_number = data['vehicle_number']
-        if 'status' in data:
-            driver.status = data['status']
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': '기사가 수정되었습니다'})
-    
-    elif request.method == 'DELETE':
-        driver_id = request.get_json().get('id')
-        driver = Driver.query.get_or_404(driver_id)
-        
-        db.session.delete(driver)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': '기사가 삭제되었습니다'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'서버 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/admin/statistics', methods=['GET'])
 @login_required
@@ -780,7 +996,7 @@ def admin_statistics():
     current_month = datetime.now().replace(day=1)
     monthly_tolerances = Tolerance.query.filter(Tolerance.created_at >= current_month).count()
     monthly_requests = DeliveryRequest.query.filter(DeliveryRequest.created_at >= current_month).count()
-    monthly_matches = Match.query.filter(Match.matched_at >= current_month).count()
+    monthly_matches = Match.query.filter(Match.created_at >= current_month).count()
     
     # Status breakdown
     tolerance_status = {}
@@ -792,7 +1008,7 @@ def admin_statistics():
         request_status[status] = DeliveryRequest.query.filter_by(status=status).count()
     
     match_status = {}
-    for status in ['proposed', 'accepted', 'rejected', 'in_progress', 'completed']:
+    for status in ['pending', 'accepted', 'rejected', 'completed']:
         match_status[status] = Match.query.filter_by(status=status).count()
     
     # Top performing carriers
